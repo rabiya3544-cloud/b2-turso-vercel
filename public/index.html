@@ -4,19 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>B2 + Turso Upload Demo</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+  input { display: block; width: 100%; margin-bottom: .5rem; padding: .4rem; }
+  button { padding: .5rem 1rem; }
+  pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; white-space: pre-wrap; }
+</style>
 </head>
 <body>
 <h1>CDN → B2 → Turso</h1>
 
-<input type="url" id="cdnUrl" placeholder="https://...cdn.../video.mp4" style="width:60%" />
+<input type="url" id="cdnUrl" placeholder="https://...cdn.../video.mp4" />
 <input type="date" id="postedDate" />
-<input type="number" id="likes" placeholder="likes" min="0" />
+<input type="number" id="likes" placeholder="likes" min="0" value="0" />
 <button id="uploadBtn">Upload</button>
 <pre id="log"></pre>
 
 <script type="module">
-// Change this if the frontend is hosted on a different origin than the API
-const API_BASE = '/api';
+const API_BASE = '';
 
 const log = (msg) => {
   document.getElementById('log').textContent += msg + '\n';
@@ -30,16 +35,20 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
   if (!url) return log('Paste a CDN URL first.');
 
   log('Uploading from CDN...');
-  const res = await fetch(`${API_BASE}/upload-from-url`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, date, likes }),
-  });
+  try {
+    const res = await fetch(`${API_BASE}/api/upload-from-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, date, likes }),
+    });
 
-  const data = await res.json();
-  if (!data.success) return log('Failed: ' + data.error);
-  log('Uploaded: ' + data.objectKey);
-  log('Public URL: ' + data.publicFileUrl);
+    const data = await res.json();
+    if (!data.success) return log('Failed: ' + data.error);
+    log('Uploaded: ' + data.objectKey);
+    log('Public URL: ' + data.publicFileUrl);
+  } catch (err) {
+    log('Request failed: ' + err.message);
+  }
 });
 </script>
 </body>
