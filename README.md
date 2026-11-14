@@ -9,8 +9,8 @@ involved, so no allowlist or credentials flag is needed.
 
 ## Stack
 
-- Frontend: static HTML in public/ (or hosted anywhere else)
-- Backend: Hono serverless function at /api/*
+- Frontend: static HTML in public/
+- Backend: Hono (framework mode) at src/app.js
 - Storage: Backblaze B2 (S3-compatible)
 - Metadata: Turso (SQLite-compatible cloud)
 
@@ -55,13 +55,8 @@ Both endpoints respond to CORS preflight (OPTIONS) automatically.
 
 1. Push this repo to GitHub.
 2. Vercel -> Add New -> Project -> import the repo.
-3. Add all env vars above.
-4. Deploy (Pro plan recommended for maxDuration 60).
+3. Add all env vars above (Production environment).
+4. Deploy.
 
-## Frontend from another origin
-
-The API sets Access-Control-Allow-Origin: * — you can host the HTML anywhere
-(Netlify, GitHub Pages, localhost, a mobile WebView). Just point it at the
-deployed API base URL, e.g.:
-
-    const API_BASE = 'https://your-project.vercel.app/api';
+Vercel detects Hono from package.json, finds src/app.js as the entrypoint,
+and introspects routes automatically. No vercel.json needed.
