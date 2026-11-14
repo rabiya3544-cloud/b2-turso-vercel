@@ -4,6 +4,8 @@ import { Upload } from '@aws-sdk/lib-storage';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createClient } from '@libsql/client';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
 const B2_BUCKET = process.env.B2_BUCKET_NAME;
 const B2_ENDPOINT = process.env.B2_ENDPOINT_URL;
@@ -160,4 +162,12 @@ app.get('/api/download-b2-file', authMiddleware, async (c) => {
   }
 });
 
+app.get('/', async (c) => {
+  try {
+    const html = await readFile(join(process.cwd(), 'public/index.html'), 'utf-8');
+    return c.html(html);
+  } catch (e) {
+    return c.text('index.html not found', 500);
+  }
+});
 export default app;
