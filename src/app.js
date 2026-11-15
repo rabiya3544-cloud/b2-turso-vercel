@@ -234,4 +234,34 @@ app.get('/api/download-b2-file', async (c) => {
   }
 });
 
+app.get('/api/download-b2-cover', async (c) => {
+  try {
+    const client = s3();
+    const db = turso();
+
+    const coverKey = c.req.query('coverKey');
+    const userId = c.req.query('userId') || 'user_123';
+    if (!coverKey) throw new Error('coverKey required');
+
+    const check = await db.execute({
+      sql: `SELECT cover_key FROM b2_files
+            WHERE cover_key = ? AND user_id = ?`,
+      args: [coverKey, userId],
+    });
+    if (check.rows.length === 0) {
+      return c.json({ success: false, error: 'Not found' }, 404);
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: process.env.B2_BUCKET_NAME,
+      Key: coverKey,
+    });
+    const downloadUrl = await getSignedUrl(client, command, { expiresIn: 300 });
+
+    return c.json({ success: true, downloadUrl });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 export default app;
