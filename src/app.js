@@ -425,4 +425,17 @@ app.delete('/api/download-links', async (c) => {
 
 // ============ end download_links feature ============
 
+// ---- Local file upload feature (separate) ----
+app.route('/api/files', filesApp);
+
+app.get('/files', async (c) => {
+  try {
+    const html = await readFile(join(process.cwd(), 'public/files.html'), 'utf-8');
+    return c.html(html);
+  } catch {
+    return c.text('files.html not found', 500);
+  }
+});
+// ---- end local file upload feature ----
+
 export default app;
