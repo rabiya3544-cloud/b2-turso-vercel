@@ -226,7 +226,7 @@ app.get('/api/download-b2-file', async (c) => {
       Bucket: process.env.B2_BUCKET_NAME,
       Key: videoKey,
     });
-    const downloadUrl = await getSignedUrl(client, command, { expiresIn: 300 });
+    const downloadUrl = await getSignedUrl(client, command, { expiresIn: 259200 });
 
     return c.json({ success: true, downloadUrl });
   } catch (error) {
@@ -256,7 +256,7 @@ app.get('/api/download-b2-cover', async (c) => {
       Bucket: process.env.B2_BUCKET_NAME,
       Key: coverKey,
     });
-    const downloadUrl = await getSignedUrl(client, command, { expiresIn: 300 });
+    const downloadUrl = await getSignedUrl(client, command, { expiresIn: 259200 });
 
     return c.json({ success: true, downloadUrl });
   } catch (error) {
