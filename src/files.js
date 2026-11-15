@@ -198,4 +198,44 @@ app.delete('/delete', async (c) => {
   }
 });
 
+// ---- Sign a fresh download URL for a local file (Option B: never store) ----
+app.get('/download', async (c) => {
+  try {
+    const client = s3();
+    const db = turso();
+    const fileKey = c.req.query('fileKey');
+    const userId = c.req.query('userId') || 'user_123';
+    if (!fileKey) throw new Error('fileKey required');
+
+    const check = await db.execute({
+      sql: `SELECT file_key, original_name, file_type, file_size
+            FROM local_files
+            WHERE file_key = ? AND user_id = ?`,
+      args: [fileKey, userId],
+    });
+    if (check.rows.length === 0) {
+      return c.json({ success: false, error: 'Not found' }, 404);
+    }
+
+    const row = check.rows[0];
+    const command = new GetObjectCommand({
+      Bucket: process.env.B2_BUCKET_NAME,
+      Key: fileKey,
+    });
+    const downloadUrl = await getSignedUrl(client, command, { expiresIn: 259200 });
+
+    return c.json({
+      success: true,
+      downloadUrl,
+      fileKey: row.file_key,
+      originalName: row.original_name,
+      fileType: row.file_type,
+      fileSize: row.file_size,
+      expiresIn: 259200,
+    });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 export default app;
