@@ -437,5 +437,28 @@ app.get('/files', async (c) => {
   }
 });
 // ---- end local file upload feature ----
+// ---- Row count for b2_files ----
+app.get('/api/b2-files-count', async (c) => {
+  try {
+    const db = turso();
+    const userId = c.req.query('userId');
 
+    let result;
+    if (userId) {
+      result = await db.execute({
+        sql: `SELECT COUNT(*) AS n FROM b2_files WHERE user_id = ?`,
+        args: [userId],
+      });
+    } else {
+      result = await db.execute({
+        sql: `SELECT COUNT(*) AS n FROM b2_files`,
+      });
+    }
+
+    const count = Number(result.rows[0]?.n) || 0;
+    return c.json({ success: true, count, userId: userId || null });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 export default app;
