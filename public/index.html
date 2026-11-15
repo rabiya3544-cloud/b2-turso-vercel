@@ -156,6 +156,19 @@
     border-color: var(--teal-dim);
     box-shadow: 0 0 0 2px rgba(20, 240, 200, 0.15);
   }
+  .field input.invalid {
+    border-color: var(--accent-error);
+    box-shadow: 0 0 0 2px rgba(255, 92, 92, 0.15);
+  }
+  .field .hint {
+    font-size: 9.5px;
+    color: var(--text-faint);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+  .field .hint.error {
+    color: var(--accent-error);
+  }
 
   .row {
     display: grid;
@@ -255,10 +268,10 @@
     color: var(--text-faint);
     font-weight: 700;
   }
-  .status.ready    { color: var(--teal-dim); border-color: var(--teal-dim); }
-  .status.busy     { color: var(--accent-warn); border-color: var(--accent-warn); }
-  .status.done     { color: var(--teal); border-color: var(--teal); background: rgba(20, 240, 200, 0.1); }
-  .status.failed   { color: var(--accent-error); border-color: var(--accent-error); background: rgba(255, 92, 92, 0.1); }
+  .status.ready  { color: var(--teal-dim); border-color: var(--teal-dim); }
+  .status.busy   { color: var(--accent-warn); border-color: var(--accent-warn); }
+  .status.done   { color: var(--teal); border-color: var(--teal); background: rgba(20, 240, 200, 0.1); }
+  .status.failed { color: var(--accent-error); border-color: var(--accent-error); background: rgba(255, 92, 92, 0.1); }
 
   /* ---------- Footer ---------- */
   footer {
@@ -303,7 +316,14 @@
     <div class="row">
       <div class="field">
         <label for="postedDate">Posted date</label>
-        <input type="date" id="postedDate" />
+        <input
+          type="text"
+          id="postedDate"
+          placeholder="2025-04-16 08:56:02"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="hint" id="dateHint">Format: YYYY-MM-DD HH:MM:SS (optional, defaults to now)</div>
       </div>
       <div class="field">
         <label for="likes">Likes</label>
@@ -335,6 +355,39 @@
   const logEl = document.getElementById('log');
   const statusEl = document.getElementById('status');
   const btn = document.getElementById('uploadBtn');
+  const dateInput = document.getElementById('postedDate');
+  const dateHint = document.getElementById('dateHint');
+
+  // Accepts "YYYY-MM-DD HH:MM:SS" (space or T separator) or plain "YYYY-MM-DD".
+  // Returns a Date, or null if the string is not parseable.
+  const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
+
+  function parsePostedDate(raw) {
+    if (!raw) return { valid: true, value: null };
+    const m = raw.trim().match(DATE_RE);
+    if (!m) return { valid: false };
+    const [, y, mo, d, h = '00', mi = '00', s = '00'] = m;
+    const dt = new Date(
+      Number(y),
+      Number(mo) - 1,
+      Number(d),
+      Number(h),
+      Number(mi),
+      Number(s)
+    );
+    if (isNaN(dt.getTime())) return { valid: false };
+    return { valid: true, value: dt };
+  }
+
+  // Live validation as the user types
+  dateInput.addEventListener('input', () => {
+    const { valid } = parsePostedDate(dateInput.value);
+    dateInput.classList.toggle('invalid', !valid && dateInput.value !== '');
+    dateHint.classList.toggle('error', !valid && dateInput.value !== '');
+    dateHint.textContent = !valid && dateInput.value !== ''
+      ? 'Invalid. Use YYYY-MM-DD HH:MM:SS'
+      : 'Format: YYYY-MM-DD HH:MM:SS (optional, defaults to now)';
+  });
 
   function log(msg, kind = 'info') {
     const line = document.createElement('span');
@@ -352,7 +405,7 @@
 
   btn.addEventListener('click', async () => {
     const url = document.getElementById('cdnUrl').value.trim();
-    const date = document.getElementById('postedDate').value;
+    const dateRaw = dateInput.value.trim();
     const likes = Number(document.getElementById('likes').value) || 0;
 
     if (!url) {
@@ -360,17 +413,23 @@
       return;
     }
 
+    const { valid } = parsePostedDate(dateRaw);
+    if (!valid) {
+      log('Invalid posted date. Expected YYYY-MM-DD HH:MM:SS', 'err');
+      return;
+    }
+
     btn.disabled = true;
     setStatus('Uploading', 'busy');
     log(`POST ${API_BASE}/api/upload-from-url`, 'info');
     log(`URL: ${url}`, 'info');
-    log(`date=${date || '(auto)'} likes=${likes}`, 'info');
+    log(`date=${dateRaw || '(auto)'} likes=${likes}`, 'info');
 
     try {
       const res = await fetch(`${API_BASE}/api/upload-from-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, date, likes }),
+        body: JSON.stringify({ url, date: dateRaw || undefined, likes }),
       });
 
       const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
