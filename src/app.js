@@ -8,17 +8,17 @@ import { join } from 'path';
 
 const app = new Hono();
 
-// ---- Lazy clients (built on first use, not at module load) ----
-let _s3, _turso, _region;
+// ---- Lazy clients ----
+let _s3;
 
 function s3() {
   if (!_s3) {
     const endpoint = process.env.B2_ENDPOINT_URL;
     if (!endpoint) throw new Error('B2_ENDPOINT_URL is not set');
-    _region = new URL(endpoint).hostname.split('.')[1];
+    const region = new URL(endpoint).hostname.split('.')[1];
     _s3 = new S3Client({
       endpoint,
-      region: _region,
+      region,
       credentials: {
         accessKeyId: process.env.B2_APPLICATION_KEY_ID,
         secretAccessKey: process.env.B2_APPLICATION_KEY,
@@ -27,6 +27,8 @@ function s3() {
   }
   return _s3;
 }
+
+let _turso;
 
 function turso() {
   if (!_turso) {
@@ -48,12 +50,7 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-const authMiddleware = async (c, next) => {
-  c.set('userId', 'user_123');
-  await next();
-};
-
-// ---- Frontend (does NOT touch B2/Turso) ----
+// ---- Frontend ----
 app.get('/', async (c) => {
   try {
     const html = await readFile(join(process.cwd(), 'public/index.html'), 'utf-8');
@@ -63,17 +60,17 @@ app.get('/', async (c) => {
   }
 });
 
-// ---- Upload (needs B2 + Turso) ----
+// ---- Upload ----
 const ALLOWED_HOSTS = /(^|\.)(tiktokv|tiktokcdn|byteoversea|ibytedtos|muscdn|tos-)\.com$/i;
 const MAX_BYTES = 300 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 90_000;
 
-app.post('/api/upload-from-url', authMiddleware, async (c) => {
+app.post('/api/upload-from-url', async (c) => {
   try {
     const client = s3();
     const db = turso();
 
-    const { url, date, likes } = await c.req.json();
+    const { url, userId, date, likes } = await c.req.json();
     if (!url) throw new Error('url required');
 
     const parsed = new URL(url);
@@ -127,18 +124,21 @@ app.post('/api/upload-from-url', authMiddleware, async (c) => {
     await upload.done();
     clearTimeout(timer);
 
-    const userId = c.get('userId');
+    const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
     const publicFileUrl = `${process.env.B2_ENDPOINT_URL}/${process.env.B2_BUCKET_NAME}/${filename}`;
-    const postedDate = date
-  ? new Date(String(date).replace(' ', 'T')).toISOString().slice(0, 10)
-  : new Date().toISOString().slice(0, 10);
+
+    const parsedDate = date ? new Date(String(date).replace(' ', 'T')) : new Date();
+    const postedDate = (isNaN(parsedDate.getTime()) ? new Date() : parsedDate)
+      .toISOString()
+      .slice(0, 10);
+
     const initialLikes = Number.isInteger(likes) && likes >= 0 ? likes : 0;
 
     await db.execute({
       sql: `INSERT INTO b2_files
               (object_key, file_url, source_cdn_url, user_id, likes, posted_date)
             VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [filename, publicFileUrl, url, userId, initialLikes, postedDate],
+      args: [filename, publicFileUrl, url, resolvedUserId, initialLikes, postedDate],
     });
 
     return c.json({
@@ -153,14 +153,14 @@ app.post('/api/upload-from-url', authMiddleware, async (c) => {
   }
 });
 
-// ---- Download (needs B2 + Turso) ----
-app.get('/api/download-b2-file', authMiddleware, async (c) => {
+// ---- Download ----
+app.get('/api/download-b2-file', async (c) => {
   try {
     const client = s3();
     const db = turso();
 
     const objectKey = c.req.query('objectKey');
-    const userId = c.get('userId');
+    const userId = c.req.query('userId') || 'user_123';
     if (!objectKey) throw new Error('objectKey required');
 
     const check = await db.execute({
