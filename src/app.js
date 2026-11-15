@@ -168,19 +168,6 @@ app.post('/api/upload-from-url', async (c) => {
     await upload.done();
     clearTimeout(timer);
 
-    // Authoritative size from B2
-    let actualSize = null;
-    try {
-      const head = await client.send(new HeadObjectCommand({
-        Bucket: process.env.B2_BUCKET_NAME,
-        Key: filename,
-      }));
-      actualSize = Number(head.ContentLength) || null;
-    } catch (headErr) {
-      console.warn('HeadObject failed, falling back to Content-Length:', headErr.message);
-      actualSize = contentLength || null;
-    }
-
     const coverKey = await uploadImageFromUrl(client, coverImg);
 
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
@@ -196,14 +183,14 @@ app.post('/api/upload-from-url', async (c) => {
       sql: `INSERT INTO b2_files
               (video_key, cover_key, user_id, likes, posted_date, file_size)
             VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [filename, coverKey, resolvedUserId, initialLikes, postedDate, actualSize],
+      args: [filename, coverKey, resolvedUserId, initialLikes, postedDate, contentLength || null],
     });
 
     return c.json({
       success: true,
       videoKey: filename,
       coverKey: coverKey || null,
-      bytes: actualSize,
+      bytes: contentLength || null,
     });
   } catch (error) {
     console.error('Upload Error:', error.message);
