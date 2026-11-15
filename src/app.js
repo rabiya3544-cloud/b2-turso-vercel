@@ -168,6 +168,21 @@ app.post('/api/upload-from-url', async (c) => {
     await upload.done();
     clearTimeout(timer);
 
+    // Ask B2 for the authoritative object size (Content-Length from the CDN
+    // is only a claim — compression, partial streams, and redirects make it
+    // unreliable). This is the true size of what landed in B2.
+    let actualSize = null;
+    try {
+      const head = await client.send(new HeadObjectCommand({
+        Bucket: process.env.B2_BUCKET_NAME,
+        Key: filename,
+      }));
+      actualSize = Number(head.ContentLength) || null;
+    } catch (headErr) {
+      console.warn('HeadObject failed, falling back to Content-Length:', headErr.message);
+      actualSize = contentLength || null;
+    }
+
     const coverKey = await uploadImageFromUrl(client, coverImg);
 
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
