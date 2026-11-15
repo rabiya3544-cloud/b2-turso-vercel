@@ -264,4 +264,30 @@ app.get('/api/download-b2-cover', async (c) => {
   }
 });
 
+app.get('/api/known-video-keys', async (c) => {
+  try {
+    const db = turso();
+    const userId = c.req.query('userId') || 'user_123';
+
+    const rows = await db.execute({
+      sql: `SELECT video_key, file_size, posted_date
+            FROM b2_files
+            WHERE user_id = ?
+            ORDER BY posted_date DESC, id DESC`,
+      args: [userId],
+    });
+
+    return c.json({
+      success: true,
+      items: rows.rows.map(r => ({
+        videoKey: r.video_key,
+        fileSize: r.file_size,
+        postedDate: r.posted_date,
+      })),
+    });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 export default app;
