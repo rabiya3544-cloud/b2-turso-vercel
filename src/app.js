@@ -290,4 +290,108 @@ app.get('/api/known-video-keys', async (c) => {
   }
 });
 
+// ============ download_links feature (self-contained) ============
+
+app.post('/api/download-links/sync', async (c) => {
+  try {
+    const client = s3();
+    const db = turso();
+    const { userId } = await c.req.json();
+    const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
+
+    // Read the user's videos from b2_files (no writes to it)
+    const rows = await db.execute({
+      sql: `SELECT video_key, cover_key, file_size
+            FROM b2_files
+            WHERE user_id = ?`,
+      args: [resolvedUserId],
+    });
+
+    let synced = 0;
+    for (const r of rows.rows) {
+      const videoCmd = new GetObjectCommand({
+        Bucket: process.env.B2_BUCKET_NAME,
+        Key: r.video_key,
+      });
+      const videoUrl = await getSignedUrl(client, videoCmd, { expiresIn: 259200 });
+
+      let coverUrl = null;
+      if (r.cover_key) {
+        const coverCmd = new GetObjectCommand({
+          Bucket: process.env.B2_BUCKET_NAME,
+          Key: r.cover_key,
+        });
+        coverUrl = await getSignedUrl(client, coverCmd, { expiresIn: 259200 });
+      }
+
+      await db.execute({
+        sql: `INSERT INTO download_links
+                (video_key, user_id, cover_key, video_url, cover_url, file_size)
+              VALUES (?, ?, ?, ?, ?, ?)
+              ON CONFLICT (video_key, user_id) DO UPDATE SET
+                cover_key = excluded.cover_key,
+                video_url = excluded.video_url,
+                cover_url = excluded.cover_url,
+                file_size = excluded.file_size`,
+        args: [r.video_key, resolvedUserId, r.cover_key, videoUrl, coverUrl, r.file_size],
+      });
+      synced++;
+    }
+
+    return c.json({ success: true, synced });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.get('/api/download-links', async (c) => {
+  try {
+    const db = turso();
+    const userId = c.req.query('userId') || 'user_123';
+
+    const rows = await db.execute({
+      sql: `SELECT video_key, user_id, cover_key, video_url, cover_url, file_size, created_at
+            FROM download_links
+            WHERE user_id = ?
+            ORDER BY created_at DESC, id DESC`,
+      args: [userId],
+    });
+
+    return c.json({
+      success: true,
+      items: rows.rows.map(r => ({
+        videoKey: r.video_key,
+        userId: r.user_id,
+        coverKey: r.cover_key,
+        videoUrl: r.video_url,
+        coverUrl: r.cover_url,
+        fileSize: r.file_size,
+        createdAt: r.created_at,
+      })),
+    });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+app.delete('/api/download-links', async (c) => {
+  try {
+    const db = turso();
+    const videoKey = c.req.query('videoKey');
+    const userId = c.req.query('userId') || 'user_123';
+    if (!videoKey) throw new Error('videoKey required');
+
+    await db.execute({
+      sql: `DELETE FROM download_links WHERE video_key = ? AND user_id = ?`,
+      args: [videoKey, userId],
+    });
+
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// ============ end download_links feature ============
+
 export default app;
