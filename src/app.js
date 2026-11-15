@@ -130,8 +130,8 @@ app.post('/api/upload-from-url', authMiddleware, async (c) => {
     const userId = c.get('userId');
     const publicFileUrl = `${process.env.B2_ENDPOINT_URL}/${process.env.B2_BUCKET_NAME}/${filename}`;
     const postedDate = date
-      ? new Date(date).toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10);
+  ? new Date(String(date).replace(' ', 'T')).toISOString().slice(0, 10)
+  : new Date().toISOString().slice(0, 10);
     const initialLikes = Number.isInteger(likes) && likes >= 0 ? likes : 0;
 
     await db.execute({
