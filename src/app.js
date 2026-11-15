@@ -5,6 +5,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createClient } from '@libsql/client';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import filesApp from './files.js';
 
 const app = new Hono();
 
