@@ -13,12 +13,14 @@ let _s3;
 
 function s3() {
   if (!_s3) {
-    const endpoint = process.env.B2_ENDPOINT_URL;
+    let endpoint = process.env.B2_ENDPOINT_URL;
     if (!endpoint) throw new Error('B2_ENDPOINT_URL is not set');
+    endpoint = endpoint.replace(/\/+$/, ''); // strip trailing slashes
     const region = new URL(endpoint).hostname.split('.')[1];
     _s3 = new S3Client({
       endpoint,
       region,
+      forcePathStyle: true, // required for B2 presigned URLs
       credentials: {
         accessKeyId: process.env.B2_APPLICATION_KEY_ID,
         secretAccessKey: process.env.B2_APPLICATION_KEY,
@@ -125,7 +127,6 @@ app.post('/api/upload-from-url', async (c) => {
     clearTimeout(timer);
 
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
-    const publicFileUrl = `${process.env.B2_ENDPOINT_URL}/${process.env.B2_BUCKET_NAME}/${filename}`;
 
     const parsedDate = date ? new Date(String(date).replace(' ', 'T')) : new Date();
     const postedDate = (isNaN(parsedDate.getTime()) ? new Date() : parsedDate)
@@ -134,17 +135,18 @@ app.post('/api/upload-from-url', async (c) => {
 
     const initialLikes = Number.isInteger(likes) && likes >= 0 ? likes : 0;
 
+    // Note: private bucket → no usable public URL to store.
+    // Access happens only via /api/download-b2-file (signed GET).
     await db.execute({
       sql: `INSERT INTO b2_files
-              (object_key, file_url, source_cdn_url, user_id, likes, posted_date)
-            VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [filename, publicFileUrl, url, resolvedUserId, initialLikes, postedDate],
+              (object_key, source_cdn_url, user_id, likes, posted_date)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [filename, url, resolvedUserId, initialLikes, postedDate],
     });
 
     return c.json({
       success: true,
       objectKey: filename,
-      publicFileUrl,
       bytes: contentLength || null,
     });
   } catch (error) {
