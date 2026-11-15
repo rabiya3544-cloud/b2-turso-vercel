@@ -313,6 +313,18 @@
       <input type="url" id="cdnUrl" placeholder="https://v16-webapp-prime.tiktok.com/video/...mp4" autocomplete="off" />
     </div>
 
+    <div class="field">
+      <label for="userId">User ID</label>
+      <input
+        type="text"
+        id="userId"
+        placeholder="user_123"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <div class="hint">Attributed to this ID in Turso (optional, defaults to user_123)</div>
+    </div>
+
     <div class="row">
       <div class="field">
         <label for="postedDate">Posted date</label>
@@ -359,7 +371,6 @@
   const dateHint = document.getElementById('dateHint');
 
   // Accepts "YYYY-MM-DD HH:MM:SS" (space or T separator) or plain "YYYY-MM-DD".
-  // Returns a Date, or null if the string is not parseable.
   const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
 
   function parsePostedDate(raw) {
@@ -379,7 +390,6 @@
     return { valid: true, value: dt };
   }
 
-  // Live validation as the user types
   dateInput.addEventListener('input', () => {
     const { valid } = parsePostedDate(dateInput.value);
     dateInput.classList.toggle('invalid', !valid && dateInput.value !== '');
@@ -405,6 +415,7 @@
 
   btn.addEventListener('click', async () => {
     const url = document.getElementById('cdnUrl').value.trim();
+    const userId = document.getElementById('userId').value.trim();
     const dateRaw = dateInput.value.trim();
     const likes = Number(document.getElementById('likes').value) || 0;
 
@@ -423,13 +434,18 @@
     setStatus('Uploading', 'busy');
     log(`POST ${API_BASE}/api/upload-from-url`, 'info');
     log(`URL: ${url}`, 'info');
-    log(`date=${dateRaw || '(auto)'} likes=${likes}`, 'info');
+    log(`user=${userId || '(default)'} date=${dateRaw || '(auto)'} likes=${likes}`, 'info');
 
     try {
       const res = await fetch(`${API_BASE}/api/upload-from-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, date: dateRaw || undefined, likes }),
+        body: JSON.stringify({
+          url,
+          userId: userId || undefined,
+          date: dateRaw || undefined,
+          likes,
+        }),
       });
 
       const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
