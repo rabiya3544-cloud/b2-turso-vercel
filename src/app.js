@@ -205,7 +205,7 @@ app.post('/api/upload-from-url', async (c) => {
       success: true,
       videoKey: filename,
       coverKey: coverKey || null,
-      bytes: contentLength || null,
+      bytes: actualSize || null,
     });
   } catch (error) {
     console.error('Upload Error:', error.message);
