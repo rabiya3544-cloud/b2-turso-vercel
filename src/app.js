@@ -292,6 +292,8 @@ app.get('/api/known-video-keys', async (c) => {
 
 // ============ download_links feature (self-contained) ============
 
+const STALE_HOURS = 48; // refresh URLs older than this; 3-day URLs get 1 day of buffer
+
 app.post('/api/download-links/sync', async (c) => {
   try {
     const client = s3();
@@ -299,16 +301,28 @@ app.post('/api/download-links/sync', async (c) => {
     const { userId } = await c.req.json();
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
 
-    // Read the user's videos from b2_files (no writes to it)
-    const rows = await db.execute({
+    // All videos the user owns in b2_files
+    const allVideos = await db.execute({
       sql: `SELECT video_key, cover_key, file_size
-            FROM b2_files
-            WHERE user_id = ?`,
+            FROM b2_files WHERE user_id = ?`,
       args: [resolvedUserId],
     });
 
-    let synced = 0;
-    for (const r of rows.rows) {
+    // Rows in download_links that are still fresh (created within STALE_HOURS)
+    const fresh = await db.execute({
+      sql: `SELECT video_key FROM download_links
+            WHERE user_id = ?
+              AND created_at > datetime('now', ?)`,
+      args: [resolvedUserId, `-${STALE_HOURS} hours`],
+    });
+    const freshKeys = new Set(fresh.rows.map(r => r.video_key));
+
+    // Process = anything not currently fresh (either missing entirely, or stale)
+    const toProcess = allVideos.rows.filter(r => !freshKeys.has(r.video_key));
+    const skipped = allVideos.rows.length - toProcess.length;
+
+    let added = 0, refreshed = 0;
+    for (const r of toProcess) {
       const videoCmd = new GetObjectCommand({
         Bucket: process.env.B2_BUCKET_NAME,
         Key: r.video_key,
@@ -324,6 +338,12 @@ app.post('/api/download-links/sync', async (c) => {
         coverUrl = await getSignedUrl(client, coverCmd, { expiresIn: 259200 });
       }
 
+      // Detect whether this is a first insert or a refresh by checking existence
+      const exists = await db.execute({
+        sql: `SELECT 1 FROM download_links WHERE video_key = ? AND user_id = ?`,
+        args: [r.video_key, resolvedUserId],
+      });
+
       await db.execute({
         sql: `INSERT INTO download_links
                 (video_key, user_id, cover_key, video_url, cover_url, file_size)
@@ -332,13 +352,23 @@ app.post('/api/download-links/sync', async (c) => {
                 cover_key = excluded.cover_key,
                 video_url = excluded.video_url,
                 cover_url = excluded.cover_url,
-                file_size = excluded.file_size`,
+                file_size = excluded.file_size,
+                created_at = CURRENT_TIMESTAMP`,
         args: [r.video_key, resolvedUserId, r.cover_key, videoUrl, coverUrl, r.file_size],
       });
-      synced++;
+
+      if (exists.rows.length > 0) refreshed++;
+      else added++;
     }
 
-    return c.json({ success: true, synced });
+    return c.json({
+      success: true,
+      added,
+      refreshed,
+      skipped,
+      total: allVideos.rows.length,
+      staleHours: STALE_HOURS,
+    });
   } catch (error) {
     return c.json({ success: false, error: error.message }, 500);
   }
