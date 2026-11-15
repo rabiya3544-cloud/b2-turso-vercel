@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>B2 + Turso — Upload</title>
+<title>B2 + Turso — Upload / Download</title>
 <style>
   :root {
     --bg-0: #061214;
@@ -89,17 +89,59 @@
       inset -1px 0 0 rgba(0, 0, 0, 0.6);
   }
 
-  .content {
+  /* ---------- Tab bar ---------- */
+  .tabbar {
+    flex-shrink: 0;
+    display: flex;
+    gap: 4px;
+    padding: 0 0 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabbar::-webkit-scrollbar { display: none; }
+
+  .tab-btn {
+    flex-shrink: 0;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); border-color: var(--teal-dim); }
+  .tab-btn.active {
+    color: var(--bg-0);
+    background: var(--teal);
+    border-color: var(--teal);
+    box-shadow: 0 0 10px var(--teal-glow), 0 0 22px -4px var(--teal-glow);
+  }
+
+  /* ---------- Panes ---------- */
+  .panes {
     flex: 1;
     min-height: 0;
+    position: relative;
+  }
+  .pane {
+    position: absolute;
+    inset: 0;
     overflow-y: auto;
-    padding: 16px 14px 24px;
+    padding: 6px 6px 16px;
+    display: none;
     scrollbar-width: thin;
     scrollbar-color: var(--teal-dim) transparent;
   }
-  .content::-webkit-scrollbar { width: 6px; }
-  .content::-webkit-scrollbar-track { background: transparent; }
-  .content::-webkit-scrollbar-thumb {
+  .pane.active { display: block; }
+  .pane::-webkit-scrollbar { width: 6px; }
+  .pane::-webkit-scrollbar-track { background: transparent; }
+  .pane::-webkit-scrollbar-thumb {
     background: var(--teal-dim);
     border-radius: 3px;
   }
@@ -125,9 +167,7 @@
   }
 
   /* ---------- Form ---------- */
-  .field {
-    margin-bottom: 10px;
-  }
+  .field { margin-bottom: 10px; }
   .field label {
     display: block;
     font-size: 9px;
@@ -149,9 +189,7 @@
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .field input::placeholder {
-    color: var(--text-faint);
-  }
+  .field input::placeholder { color: var(--text-faint); }
   .field input:focus {
     border-color: var(--teal-dim);
     box-shadow: 0 0 0 2px rgba(20, 240, 200, 0.15);
@@ -166,9 +204,7 @@
     margin-top: 4px;
     letter-spacing: 0.02em;
   }
-  .field .hint.error {
-    color: var(--accent-error);
-  }
+  .field .hint.error { color: var(--accent-error); }
 
   .row {
     display: grid;
@@ -201,9 +237,7 @@
       0 0 14px var(--teal-glow),
       0 0 28px -2px var(--teal-glow);
   }
-  .btn:active:not(:disabled) {
-    transform: translateY(1px);
-  }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
   .btn:disabled {
     background: var(--bg-3);
     border-color: var(--border);
@@ -273,6 +307,29 @@
   .status.done   { color: var(--teal); border-color: var(--teal); background: rgba(20, 240, 200, 0.1); }
   .status.failed { color: var(--accent-error); border-color: var(--accent-error); background: rgba(255, 92, 92, 0.1); }
 
+  /* ---------- Video preview ---------- */
+  .preview {
+    margin-top: 12px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    display: none;
+  }
+  .preview.active { display: block; }
+  .preview video {
+    width: 100%;
+    display: block;
+    background: #000;
+  }
+  .preview .preview-meta {
+    padding: 6px 10px;
+    font-size: 9.5px;
+    color: var(--text-faint);
+    border-top: 1px solid var(--border);
+    word-break: break-all;
+  }
+
   /* ---------- Footer ---------- */
   footer {
     flex-shrink: 0;
@@ -300,59 +357,90 @@
 
 <header>
   <h1>B2 + Turso</h1>
-  <span class="sub">Upload from CDN</span>
+  <span class="sub">Upload / Download</span>
 </header>
 
 <main>
-  <div class="content">
-    <h2>Ingest a video</h2>
-    <p class="lead">Paste a CDN URL. The backend fetches it, streams it into B2, and stores metadata in Turso.</p>
+  <nav class="tabbar" role="tablist">
+    <button class="tab-btn active" data-tab="upload" role="tab">Upload</button>
+    <button class="tab-btn" data-tab="download" role="tab">Download</button>
+  </nav>
 
-    <div class="field">
-      <label for="cdnUrl">CDN URL</label>
-      <input type="url" id="cdnUrl" placeholder="https://v16-webapp-prime.tiktok.com/video/...mp4" autocomplete="off" />
-    </div>
+  <div class="panes">
 
-    <div class="field">
-      <label for="userId">User ID</label>
-      <input
-        type="text"
-        id="userId"
-        placeholder="user_123"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <div class="hint">Attributed to this ID in Turso (optional, defaults to user_123)</div>
-    </div>
+    <!-- ============ UPLOAD ============ -->
+    <section class="pane active" id="upload">
+      <h2>Ingest a video</h2>
+      <p class="lead">Paste a CDN URL. The backend fetches it, streams it into B2, and stores metadata in Turso.</p>
 
-    <div class="row">
       <div class="field">
-        <label for="postedDate">Posted date</label>
-        <input
-          type="text"
-          id="postedDate"
-          placeholder="2025-04-16 08:56:02"
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <div class="hint" id="dateHint">Format: YYYY-MM-DD HH:MM:SS (optional, defaults to now)</div>
+        <label for="cdnUrl">CDN URL</label>
+        <input type="url" id="cdnUrl" placeholder="https://v16-webapp-prime.tiktok.com/video/...mp4" autocomplete="off" />
       </div>
+
       <div class="field">
-        <label for="likes">Likes</label>
-        <input type="number" id="likes" min="0" value="0" placeholder="0" />
+        <label for="userId">User ID</label>
+        <input type="text" id="userId" placeholder="user_123" autocomplete="off" spellcheck="false" />
+        <div class="hint">Attributed to this ID in Turso (optional, defaults to user_123)</div>
       </div>
-    </div>
 
-    <button class="btn" id="uploadBtn">Upload</button>
-
-    <h3>Log</h3>
-    <div class="log">
-      <div class="log-header">
-        <span>Activity</span>
-        <span class="status" id="status">Idle</span>
+      <div class="row">
+        <div class="field">
+          <label for="postedDate">Posted date</label>
+          <input type="text" id="postedDate" placeholder="2025-04-16 08:56:02" autocomplete="off" spellcheck="false" />
+          <div class="hint" id="dateHint">Format: YYYY-MM-DD HH:MM:SS (optional, defaults to now)</div>
+        </div>
+        <div class="field">
+          <label for="likes">Likes</label>
+          <input type="number" id="likes" min="0" value="0" placeholder="0" />
+        </div>
       </div>
-      <div class="log-body" id="log"></div>
-    </div>
+
+      <button class="btn" id="uploadBtn">Upload</button>
+
+      <h3>Log</h3>
+      <div class="log">
+        <div class="log-header">
+          <span>Activity</span>
+          <span class="status" id="uploadStatus">Idle</span>
+        </div>
+        <div class="log-body" id="uploadLog"></div>
+      </div>
+    </section>
+
+    <!-- ============ DOWNLOAD ============ -->
+    <section class="pane" id="download">
+      <h2>Fetch a signed URL</h2>
+      <p class="lead">Paste an object key from Turso. The backend verifies ownership and returns a temporary signed URL for playback.</p>
+
+      <div class="field">
+        <label for="objectKey">Object key</label>
+        <input type="text" id="objectKey" placeholder="video_2025-05-22_12_54_49.mp4" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="field">
+        <label for="downloadUserId">User ID</label>
+        <input type="text" id="downloadUserId" placeholder="user_123" autocomplete="off" spellcheck="false" />
+        <div class="hint">Must match the user_id stored in Turso (optional, defaults to user_123)</div>
+      </div>
+
+      <button class="btn" id="downloadBtn">Get Signed URL</button>
+
+      <div class="preview" id="preview">
+        <video id="videoPlayer" controls playsinline></video>
+        <div class="preview-meta" id="previewMeta"></div>
+      </div>
+
+      <h3>Log</h3>
+      <div class="log">
+        <div class="log-header">
+          <span>Activity</span>
+          <span class="status" id="downloadStatus">Idle</span>
+        </div>
+        <div class="log-body" id="downloadLog"></div>
+      </div>
+    </section>
+
   </div>
 </main>
 
@@ -362,15 +450,38 @@
 </footer>
 
 <script type="module">
-  const API_BASE = ''; // same origin; change to absolute URL if hosted elsewhere
+  const API_BASE = '';
 
-  const logEl = document.getElementById('log');
-  const statusEl = document.getElementById('status');
-  const btn = document.getElementById('uploadBtn');
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === target));
+    });
+  });
+
+  // ---------- Shared helpers ----------
+  function logTo(el, msg, kind = 'info') {
+    const line = document.createElement('span');
+    line.className = `line ${kind}`;
+    const time = new Date().toLocaleTimeString();
+    line.textContent = `[${time}] ${msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+  function setStatus(el, text, cls) {
+    el.textContent = text;
+    el.className = `status ${cls || ''}`;
+  }
+
+  // ---------- Upload ----------
+  const uploadLogEl = document.getElementById('uploadLog');
+  const uploadStatusEl = document.getElementById('uploadStatus');
+  const uploadBtn = document.getElementById('uploadBtn');
   const dateInput = document.getElementById('postedDate');
   const dateHint = document.getElementById('dateHint');
 
-  // Accepts "YYYY-MM-DD HH:MM:SS" (space or T separator) or plain "YYYY-MM-DD".
   const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
 
   function parsePostedDate(raw) {
@@ -379,12 +490,8 @@
     if (!m) return { valid: false };
     const [, y, mo, d, h = '00', mi = '00', s = '00'] = m;
     const dt = new Date(
-      Number(y),
-      Number(mo) - 1,
-      Number(d),
-      Number(h),
-      Number(mi),
-      Number(s)
+      Number(y), Number(mo) - 1, Number(d),
+      Number(h), Number(mi), Number(s)
     );
     if (isNaN(dt.getTime())) return { valid: false };
     return { valid: true, value: dt };
@@ -399,42 +506,28 @@
       : 'Format: YYYY-MM-DD HH:MM:SS (optional, defaults to now)';
   });
 
-  function log(msg, kind = 'info') {
-    const line = document.createElement('span');
-    line.className = `line ${kind}`;
-    const time = new Date().toLocaleTimeString();
-    line.textContent = `[${time}] ${msg}`;
-    logEl.appendChild(line);
-    logEl.scrollTop = logEl.scrollHeight;
-  }
-
-  function setStatus(text, cls) {
-    statusEl.textContent = text;
-    statusEl.className = `status ${cls || ''}`;
-  }
-
-  btn.addEventListener('click', async () => {
+  uploadBtn.addEventListener('click', async () => {
     const url = document.getElementById('cdnUrl').value.trim();
     const userId = document.getElementById('userId').value.trim();
     const dateRaw = dateInput.value.trim();
     const likes = Number(document.getElementById('likes').value) || 0;
 
     if (!url) {
-      log('Paste a CDN URL first.', 'err');
+      logTo(uploadLogEl, 'Paste a CDN URL first.', 'err');
       return;
     }
 
     const { valid } = parsePostedDate(dateRaw);
     if (!valid) {
-      log('Invalid posted date. Expected YYYY-MM-DD HH:MM:SS', 'err');
+      logTo(uploadLogEl, 'Invalid posted date. Expected YYYY-MM-DD HH:MM:SS', 'err');
       return;
     }
 
-    btn.disabled = true;
-    setStatus('Uploading', 'busy');
-    log(`POST ${API_BASE}/api/upload-from-url`, 'info');
-    log(`URL: ${url}`, 'info');
-    log(`user=${userId || '(default)'} date=${dateRaw || '(auto)'} likes=${likes}`, 'info');
+    uploadBtn.disabled = true;
+    setStatus(uploadStatusEl, 'Uploading', 'busy');
+    logTo(uploadLogEl, `POST ${API_BASE}/api/upload-from-url`, 'info');
+    logTo(uploadLogEl, `URL: ${url}`, 'info');
+    logTo(uploadLogEl, `user=${userId || '(default)'} date=${dateRaw || '(auto)'} likes=${likes}`, 'info');
 
     try {
       const res = await fetch(`${API_BASE}/api/upload-from-url`, {
@@ -451,20 +544,76 @@
       const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
 
       if (!res.ok || !data.success) {
-        log(`Failed: ${data.error || 'unknown error'}`, 'err');
-        setStatus('Failed', 'failed');
+        logTo(uploadLogEl, `Failed: ${data.error || 'unknown error'}`, 'err');
+        setStatus(uploadStatusEl, 'Failed', 'failed');
         return;
       }
 
-      log(`Uploaded: ${data.objectKey}`, 'ok');
-      if (data.publicFileUrl) log(`Public URL: ${data.publicFileUrl}`, 'ok');
-      if (data.bytes) log(`Size: ${data.bytes} bytes`, 'info');
-      setStatus('Done', 'done');
+      logTo(uploadLogEl, `Uploaded: ${data.objectKey}`, 'ok');
+      if (data.bytes) logTo(uploadLogEl, `Size: ${data.bytes} bytes`, 'info');
+      setStatus(uploadStatusEl, 'Done', 'done');
+
+      // Convenience: prefill the Download tab with the new key + user
+      document.getElementById('objectKey').value = data.objectKey || '';
+      document.getElementById('downloadUserId').value = userId || '';
     } catch (err) {
-      log(`Request failed: ${err.message}`, 'err');
-      setStatus('Failed', 'failed');
+      logTo(uploadLogEl, `Request failed: ${err.message}`, 'err');
+      setStatus(uploadStatusEl, 'Failed', 'failed');
     } finally {
-      btn.disabled = false;
+      uploadBtn.disabled = false;
+    }
+  });
+
+  // ---------- Download ----------
+  const downloadLogEl = document.getElementById('downloadLog');
+  const downloadStatusEl = document.getElementById('downloadStatus');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const previewEl = document.getElementById('preview');
+  const videoPlayer = document.getElementById('videoPlayer');
+  const previewMeta = document.getElementById('previewMeta');
+
+  downloadBtn.addEventListener('click', async () => {
+    const objectKey = document.getElementById('objectKey').value.trim();
+    const userId = document.getElementById('downloadUserId').value.trim();
+
+    if (!objectKey) {
+      logTo(downloadLogEl, 'Object key is required.', 'err');
+      return;
+    }
+
+    downloadBtn.disabled = true;
+    setStatus(downloadStatusEl, 'Signing', 'busy');
+    logTo(downloadLogEl, `GET ${API_BASE}/api/download-b2-file`, 'info');
+    logTo(downloadLogEl, `objectKey=${objectKey} user=${userId || '(default)'}`, 'info');
+
+    try {
+      const params = new URLSearchParams({ objectKey });
+      if (userId) params.set('userId', userId);
+
+      const res = await fetch(`${API_BASE}/api/download-b2-file?${params}`);
+      const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+
+      if (!res.ok || !data.success) {
+        logTo(downloadLogEl, `Failed: ${data.error || 'unknown error'}`, 'err');
+        setStatus(downloadStatusEl, 'Failed', 'failed');
+        previewEl.classList.remove('active');
+        return;
+      }
+
+      logTo(downloadLogEl, 'Signed URL issued', 'ok');
+      logTo(downloadLogEl, data.downloadUrl, 'info');
+      setStatus(downloadStatusEl, 'Done', 'done');
+
+      // Show a playable preview — the URL expires (5 min default)
+      previewEl.classList.add('active');
+      videoPlayer.src = data.downloadUrl;
+      videoPlayer.load();
+      previewMeta.textContent = `Signed URL (expires in 5 min) · ${data.downloadUrl.slice(0, 80)}…`;
+    } catch (err) {
+      logTo(downloadLogEl, `Request failed: ${err.message}`, 'err');
+      setStatus(downloadStatusEl, 'Failed', 'failed');
+    } finally {
+      downloadBtn.disabled = false;
     }
   });
 </script>
