@@ -8,19 +8,18 @@ import { join } from 'path';
 
 const app = new Hono();
 
-// ---- Lazy clients ----
 let _s3;
 
 function s3() {
   if (!_s3) {
     let endpoint = process.env.B2_ENDPOINT_URL;
     if (!endpoint) throw new Error('B2_ENDPOINT_URL is not set');
-    endpoint = endpoint.replace(/\/+$/, ''); // strip trailing slashes
+    endpoint = endpoint.replace(/\/+$/, '');
     const region = new URL(endpoint).hostname.split('.')[1];
     _s3 = new S3Client({
       endpoint,
       region,
-      forcePathStyle: true, // required for B2 presigned URLs
+      forcePathStyle: true,
       credentials: {
         accessKeyId: process.env.B2_APPLICATION_KEY_ID,
         secretAccessKey: process.env.B2_APPLICATION_KEY,
@@ -42,7 +41,6 @@ function turso() {
   return _turso;
 }
 
-// ---- CORS ----
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
   c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -52,7 +50,6 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-// ---- Frontend ----
 app.get('/', async (c) => {
   try {
     const html = await readFile(join(process.cwd(), 'public/index.html'), 'utf-8');
@@ -62,17 +59,61 @@ app.get('/', async (c) => {
   }
 });
 
-// ---- Upload ----
 const ALLOWED_HOSTS = /(^|\.)(tiktokv|tiktokcdn|byteoversea|ibytedtos|muscdn|tos-)\.com$/i;
 const MAX_BYTES = 300 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 90_000;
+
+async function uploadImageFromUrl(client, imageUrl) {
+  if (!imageUrl) return null;
+
+  let parsed;
+  try { parsed = new URL(imageUrl); } catch { return null; }
+  if (!/^https?:$/.test(parsed.protocol)) return null;
+  if (!ALLOWED_HOSTS.test(parsed.hostname)) return null;
+
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 30_000);
+
+  try {
+    const upstream = await fetch(imageUrl, {
+      signal: ctl.signal,
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*' },
+    });
+    clearTimeout(timer);
+
+    if (!upstream.ok) return null;
+
+    const contentType = upstream.headers.get('content-type') || '';
+    if (contentType && !/^image\//i.test(contentType)) return null;
+
+    const ext = (contentType.split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '').slice(0, 5);
+    const coverKey = `cover_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const imageUpload = new Upload({
+      client,
+      params: {
+        Bucket: process.env.B2_BUCKET_NAME,
+        Key: coverKey,
+        Body: upstream.body,
+        ContentType: contentType || 'image/jpeg',
+      },
+    });
+
+    await imageUpload.done();
+    return coverKey;
+  } catch {
+    clearTimeout(timer);
+    return null;
+  }
+}
 
 app.post('/api/upload-from-url', async (c) => {
   try {
     const client = s3();
     const db = turso();
 
-    const { url, userId, date, likes } = await c.req.json();
+    const { url, userId, date, likes, coverImg } = await c.req.json();
     if (!url) throw new Error('url required');
 
     const parsed = new URL(url);
@@ -126,6 +167,8 @@ app.post('/api/upload-from-url', async (c) => {
     await upload.done();
     clearTimeout(timer);
 
+    const coverKey = await uploadImageFromUrl(client, coverImg);
+
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
 
     const parsedDate = date ? new Date(String(date).replace(' ', 'T')) : new Date();
@@ -135,18 +178,24 @@ app.post('/api/upload-from-url', async (c) => {
 
     const initialLikes = Number.isInteger(likes) && likes >= 0 ? likes : 0;
 
-    // Note: private bucket → no usable public URL to store.
-    // Access happens only via /api/download-b2-file (signed GET).
     await db.execute({
       sql: `INSERT INTO b2_files
-              (object_key, source_cdn_url, user_id, likes, posted_date)
-            VALUES (?, ?, ?, ?, ?)`,
-      args: [filename, url, resolvedUserId, initialLikes, postedDate],
+              (video_key, cover_key, user_id, likes, posted_date, file_size)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [
+        filename,
+        coverKey,
+        resolvedUserId,
+        initialLikes,
+        postedDate,
+        contentLength || null,
+      ],
     });
 
     return c.json({
       success: true,
-      objectKey: filename,
+      videoKey: filename,
+      coverKey: coverKey || null,
       bytes: contentLength || null,
     });
   } catch (error) {
@@ -155,20 +204,19 @@ app.post('/api/upload-from-url', async (c) => {
   }
 });
 
-// ---- Download ----
 app.get('/api/download-b2-file', async (c) => {
   try {
     const client = s3();
     const db = turso();
 
-    const objectKey = c.req.query('objectKey');
+    const videoKey = c.req.query('videoKey');
     const userId = c.req.query('userId') || 'user_123';
-    if (!objectKey) throw new Error('objectKey required');
+    if (!videoKey) throw new Error('videoKey required');
 
     const check = await db.execute({
-      sql: `SELECT object_key FROM b2_files
-            WHERE object_key = ? AND user_id = ?`,
-      args: [objectKey, userId],
+      sql: `SELECT video_key FROM b2_files
+            WHERE video_key = ? AND user_id = ?`,
+      args: [videoKey, userId],
     });
     if (check.rows.length === 0) {
       return c.json({ success: false, error: 'Not found' }, 404);
@@ -176,7 +224,7 @@ app.get('/api/download-b2-file', async (c) => {
 
     const command = new GetObjectCommand({
       Bucket: process.env.B2_BUCKET_NAME,
-      Key: objectKey,
+      Key: videoKey,
     });
     const downloadUrl = await getSignedUrl(client, command, { expiresIn: 300 });
 
