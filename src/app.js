@@ -168,9 +168,7 @@ app.post('/api/upload-from-url', async (c) => {
     await upload.done();
     clearTimeout(timer);
 
-    // Ask B2 for the authoritative object size (Content-Length from the CDN
-    // is only a claim — compression, partial streams, and redirects make it
-    // unreliable). This is the true size of what landed in B2.
+    // Authoritative size from B2
     let actualSize = null;
     try {
       const head = await client.send(new HeadObjectCommand({
@@ -205,7 +203,7 @@ app.post('/api/upload-from-url', async (c) => {
       success: true,
       videoKey: filename,
       coverKey: coverKey || null,
-      bytes: actualSize || null,
+      bytes: actualSize,
     });
   } catch (error) {
     console.error('Upload Error:', error.message);
