@@ -198,14 +198,7 @@ app.post('/api/upload-from-url', async (c) => {
       sql: `INSERT INTO b2_files
               (video_key, cover_key, user_id, likes, posted_date, file_size)
             VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [
-        filename,
-        coverKey,
-        resolvedUserId,
-        initialLikes,
-        postedDate,
-        contentLength || null,
-      ],
+      args: [filename, coverKey, resolvedUserId, initialLikes, postedDate, actualSize],
     });
 
     return c.json({
