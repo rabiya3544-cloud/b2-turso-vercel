@@ -37,7 +37,6 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ---------- Header ---------- */
   header {
     flex-shrink: 0;
     padding: 10px 14px;
@@ -70,7 +69,6 @@
     letter-spacing: 0.1em;
   }
 
-  /* ---------- Main ---------- */
   main {
     flex: 1;
     min-height: 0;
@@ -89,7 +87,6 @@
       inset -1px 0 0 rgba(0, 0, 0, 0.6);
   }
 
-  /* ---------- Tab bar ---------- */
   .tabbar {
     flex-shrink: 0;
     display: flex;
@@ -123,7 +120,6 @@
     box-shadow: 0 0 10px var(--teal-glow), 0 0 22px -4px var(--teal-glow);
   }
 
-  /* ---------- Panes ---------- */
   .panes {
     flex: 1;
     min-height: 0;
@@ -146,7 +142,6 @@
     border-radius: 3px;
   }
 
-  /* ---------- Typography ---------- */
   h2 {
     font-size: 13px;
     color: var(--teal);
@@ -166,7 +161,6 @@
     letter-spacing: 0.08em;
   }
 
-  /* ---------- Form ---------- */
   .field { margin-bottom: 10px; }
   .field label {
     display: block;
@@ -212,7 +206,6 @@
     gap: 8px;
   }
 
-  /* ---------- Button ---------- */
   .btn {
     width: 100%;
     font-family: inherit;
@@ -246,7 +239,6 @@
     box-shadow: none;
   }
 
-  /* ---------- Log ---------- */
   .log {
     margin-top: 16px;
     background: var(--code-bg);
@@ -289,7 +281,6 @@
   .log .line.info  { color: var(--text-dim); }
   .log .line.wait  { color: var(--accent-warn); }
 
-  /* ---------- Status pill ---------- */
   .status {
     display: inline-block;
     font-size: 9px;
@@ -307,7 +298,6 @@
   .status.done   { color: var(--teal); border-color: var(--teal); background: rgba(20, 240, 200, 0.1); }
   .status.failed { color: var(--accent-error); border-color: var(--accent-error); background: rgba(255, 92, 92, 0.1); }
 
-  /* ---------- Video preview ---------- */
   .preview {
     margin-top: 12px;
     background: var(--code-bg);
@@ -330,7 +320,6 @@
     word-break: break-all;
   }
 
-  /* ---------- Footer ---------- */
   footer {
     flex-shrink: 0;
     padding: 8px 12px;
@@ -352,6 +341,198 @@
   }
   footer .dot { color: var(--teal); text-shadow: 0 0 8px var(--teal-glow); }
 </style>
+<style>
+  .table-wrap {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .posts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: inherit;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    table-layout: fixed;
+  }
+
+  .posts-table thead {
+    background: var(--bg-2);
+  }
+
+  .posts-table th {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--teal-dim);
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .posts-table th.col-sno   { width: 40px; text-align: center; }
+  .posts-table th.col-cover { width: 64px; }
+  .posts-table th.col-likes { width: 72px; text-align: right; }
+  .posts-table th.col-date  { width: 96px; }
+
+  .posts-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+  }
+  .posts-table tbody tr:last-child { border-bottom: none; }
+
+  .posts-table tbody tr:hover { background: var(--bg-2); }
+  .posts-table tbody tr:active { background: var(--bg-3); }
+
+  .posts-table td {
+    padding: 6px 8px;
+    vertical-align: middle;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .posts-table td.col-sno {
+    text-align: center;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .posts-table td.col-cover { padding: 4px 8px; }
+  .posts-table td.col-cover img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-3);
+    display: block;
+  }
+  .posts-table td.col-cover .no-cover {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    border: 1px dashed var(--border);
+    background: var(--bg-3);
+  }
+
+  .posts-table td.col-likes {
+    text-align: right;
+    color: var(--teal);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .posts-table td.col-date {
+    color: var(--text-faint);
+    font-size: 10px;
+  }
+
+  .posts-table .row-empty {
+    padding: 14px 10px;
+    text-align: center;
+    color: var(--text-faint);
+  }
+  .posts-table .row-error {
+    padding: 14px 10px;
+    text-align: center;
+    color: var(--accent-error);
+  }
+
+  .posts-table tbody tr.selected {
+    background: rgba(20, 240, 200, 0.08);
+  }
+  .posts-table tbody tr.selected td.col-sno {
+    color: var(--teal);
+  }
+  .preview img {
+  width: 100%;
+  display: block;
+  background: var(--bg-3);
+  object-fit: contain;
+  max-height: 320px;
+}
+
+.field textarea {
+    width: 100%;
+    min-height: 120px;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+    line-height: 1.5;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field textarea::placeholder { color: var(--text-faint); }
+  .field textarea:focus {
+    border-color: var(--teal-dim);
+    box-shadow: 0 0 0 2px rgba(20, 240, 200, 0.15);
+  }
+
+  .posts-table td.cell-status { font-size: 10px; }
+  .posts-table td.cell-status.pending { color: var(--text-faint); }
+  .posts-table td.cell-status.running { color: var(--accent-warn); }
+  .posts-table td.cell-status.ok      { color: var(--teal); }
+  .posts-table td.cell-status.fail    { color: var(--accent-error); }
+
+  .posts-table td.col-key {
+    color: var(--text-faint);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .posts-table td.cell-status { font-size: 10px; white-space: nowrap; }
+  .posts-table td.cell-status.pending { color: var(--text-faint); }
+  .posts-table td.cell-status.running { color: var(--accent-warn); }
+  .posts-table td.cell-status.ok      { color: var(--teal); }
+  .posts-table td.cell-status.fail    { color: var(--accent-error); }
+
+  .posts-table td.col-key {
+    color: var(--text-faint);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .field select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 11.5px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field select:focus {
+    border-color: var(--teal-dim);
+    box-shadow: 0 0 0 2px rgba(20, 240, 200, 0.15);
+  }
+
+  .posts-table td.col-key-text {
+    color: var(--text-dim);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+  }
+</style>
 </head>
 <body>
 
@@ -364,11 +545,13 @@
   <nav class="tabbar" role="tablist">
     <button class="tab-btn active" data-tab="upload" role="tab">Upload</button>
     <button class="tab-btn" data-tab="download" role="tab">Download</button>
+    <button class="tab-btn" data-tab="posts" role="tab">Posts</button>
+    <button class="tab-btn" data-tab="bulk" role="tab">Bulk</button>
+    <button class="tab-btn" data-tab="bulkdl" role="tab">Bulk DL</button>
   </nav>
 
   <div class="panes">
 
-    <!-- ============ UPLOAD ============ -->
     <section class="pane active" id="upload">
       <h2>Ingest a video</h2>
       <p class="lead">Paste a CDN URL. The backend fetches it, streams it into B2, and stores metadata in Turso.</p>
@@ -379,8 +562,14 @@
       </div>
 
       <div class="field">
+        <label for="coverImg">Cover Image</label>
+        <input type="url" id="coverImg" placeholder="https://p16-common-sign.tiktokcdn.com/..." autocomplete="off" />
+        <div class="hint">Optional. Streamed into B2 alongside the video.</div>
+      </div>
+
+      <div class="field">
         <label for="userId">User ID</label>
-        <input type="text" id="userId" placeholder="user_123" autocomplete="off" spellcheck="false" />
+        <input type="text" id="userId" placeholder="user_123" autocomplete="off" spellcheck="false" value="jafernegery" />
         <div class="hint">Attributed to this ID in Turso (optional, defaults to user_123)</div>
       </div>
 
@@ -408,39 +597,186 @@
       </div>
     </section>
 
-    <!-- ============ DOWNLOAD ============ -->
     <section class="pane" id="download">
-      <h2>Fetch a signed URL</h2>
-      <p class="lead">Paste an object key from Turso. The backend verifies ownership and returns a temporary signed URL for playback.</p>
+  <h2>Fetch a signed URL</h2>
+  <p class="lead">Paste a video key or cover key from Turso. The backend verifies ownership and returns a temporary signed URL.</p>
+  
+  <h3>Video</h3>
+  <div class="field">
+    <label for="videoKey">Video key</label>
+    <input type="text" id="videoKey" placeholder="video_2025-05-22_12_54_49.mp4" autocomplete="off" spellcheck="false" />
+  </div>
+  
+  <div class="field">
+    <label for="downloadUserId">User ID</label>
+    <input type="text" id="downloadUserId" placeholder="user_123" autocomplete="off" spellcheck="false" />
+    <div class="hint">Must match the user_id stored in Turso (optional, defaults to user_123)</div>
+  </div>
+  
+  <button class="btn" id="downloadBtn">Get Video URL</button>
+  
+  <div class="preview" id="preview">
+    <video id="videoPlayer" controls playsinline></video>
+    <div class="preview-meta" id="previewMeta"></div>
+  </div>
+  
+  <h3>Cover</h3>
+  <div class="field">
+    <label for="coverKey">Cover key</label>
+    <input type="text" id="coverKey" placeholder="cover_1721567890_ab12cd.jpg" autocomplete="off" spellcheck="false" />
+  </div>
+  
+  <button class="btn" id="coverBtn">Get Cover URL</button>
+  
+  <div class="preview" id="coverPreview">
+    <img id="coverPlayer" alt="" />
+    <div class="preview-meta" id="coverMeta"></div>
+  </div>
+  
+  <h3>Log</h3>
+  <div class="log">
+    <div class="log-header">
+      <span>Activity</span>
+      <span class="status" id="downloadStatus">Idle</span>
+    </div>
+    <div class="log-body" id="downloadLog"></div>
+  </div>
+</section>
+
+    <section class="pane" id="posts">
+      <h2>Top liked posts</h2>
+      <p class="lead">Fetched from a separate Turso API. Click a row to copy its link.</p>
 
       <div class="field">
-        <label for="objectKey">Object key</label>
-        <input type="text" id="objectKey" placeholder="video_2025-05-22_12_54_49.mp4" autocomplete="off" spellcheck="false" />
+        <label for="postsLimit">Limit</label>
+        <input type="number" id="postsLimit" min="1" max="500" value="50" />
       </div>
+
+      <button class="btn" id="postsBtn">Load</button>
+
+      <h3>Results</h3>
+      <div class="table-wrap">
+        <table class="posts-table">
+          <thead>
+            <tr>
+              <th class="col-sno">#</th>
+              <th class="col-cover">Cover</th>
+              <th class="col-likes">Likes</th>
+              <th class="col-date">Date</th>
+            </tr>
+          </thead>
+          <tbody id="posts-tbody">
+            <tr><td colspan="4" class="row-empty">Not loaded</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="log">
+        <div class="log-header">
+          <span>Activity</span>
+          <span class="status" id="postsStatus">Idle</span>
+        </div>
+        <div class="log-body" id="postsLog"></div>
+      </div>
+
+      <input type="hidden" id="url" />
+    </section>
+
+<section class="pane" id="bulk">
+      <h2>Bulk upload from top posts</h2>
+      <p class="lead">Fetches the top-liked posts, then uploads each to B2 one at a time. Status updates per row.</p>
 
       <div class="field">
-        <label for="downloadUserId">User ID</label>
-        <input type="text" id="downloadUserId" placeholder="user_123" autocomplete="off" spellcheck="false" />
-        <div class="hint">Must match the user_id stored in Turso (optional, defaults to user_123)</div>
+        <label for="bulkLimit">Limit</label>
+        <input type="number" id="bulkLimit" min="1" max="200" value="10" />
+        <div class="hint">Runs sequentially — one request per row. Keep this small on Hobby plan.</div>
       </div>
+      <div class="field">
+  <label for="bulkSkip">Skip first N</label>
+  <input type="number" id="bulkSkip" min="0" max="500" value="5" />
+  <div class="hint">Already-uploaded items at the head of the list are skipped (default 5)</div>
+</div>
 
-      <button class="btn" id="downloadBtn">Get Signed URL</button>
+      <button class="btn" id="bulkLoadBtn">Load &amp; Upload</button>
 
-      <div class="preview" id="preview">
-        <video id="videoPlayer" controls playsinline></video>
-        <div class="preview-meta" id="previewMeta"></div>
+      <h3>Progress</h3>
+      <div class="table-wrap">
+        <table class="posts-table">
+          <thead>
+            <tr>
+              <th class="col-sno">#</th>
+              <th class="col-cover">Cover</th>
+              <th>Status</th>
+              <th class="col-date">Key</th>
+            </tr>
+          </thead>
+          <tbody id="bulk-tbody">
+            <tr><td colspan="4" class="row-empty">Nothing queued</td></tr>
+          </tbody>
+        </table>
       </div>
 
       <h3>Log</h3>
       <div class="log">
         <div class="log-header">
           <span>Activity</span>
-          <span class="status" id="downloadStatus">Idle</span>
+          <span class="status" id="bulkStatus">Idle</span>
         </div>
-        <div class="log-body" id="downloadLog"></div>
+        <div class="log-body" id="bulkLog"></div>
       </div>
     </section>
+    
+    <section class="pane" id="bulkdl">
+      <h2>Bulk download</h2>
+      <p class="lead">Fetch signed URLs for many video keys and download each file. One request per key, sequential — no parallel hammering.</p>
 
+      <div class="field">
+        <label for="bulkDlUserId">User ID</label>
+        <input type="text" id="bulkDlUserId" placeholder="jafernegery" value="jafernegery" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="field">
+        <label for="bulkDlSource">Source</label>
+        <select id="bulkDlSource">
+          <option value="turso">All keys for this user (from Turso)</option>
+          <option value="manual">Paste keys (one per line)</option>
+        </select>
+      </div>
+
+      <div class="field" id="bulkDlManualField" style="display:none;">
+        <label for="bulkDlKeys">Video keys</label>
+        <textarea id="bulkDlKeys" placeholder="video_2025-05-22_12_54_49.mp4&#10;video_2025-05-23_08_00_00.mp4" spellcheck="false"></textarea>
+      </div>
+
+      <button class="btn" id="bulkDlBtn">Start</button>
+
+      <h3>Progress</h3>
+      <div class="table-wrap">
+        <table class="posts-table">
+          <thead>
+            <tr>
+              <th class="col-sno">#</th>
+              <th>Video key</th>
+              <th class="col-date">Size</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="bulkdl-tbody">
+            <tr><td colspan="4" class="row-empty">Nothing queued</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Log</h3>
+      <div class="log">
+        <div class="log-header">
+          <span>Activity</span>
+          <span class="status" id="bulkDlStatus">Idle</span>
+        </div>
+        <div class="log-body" id="bulkDlLog"></div>
+      </div>
+    </section>
+    
   </div>
 </main>
 
@@ -450,9 +786,8 @@
 </footer>
 
 <script type="module">
-  const API_BASE = '';
+  const API_BASE = 'https://b2-turso-vercel.vercel.app';
 
-  // ---------- Tabs ----------
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.tab;
@@ -461,7 +796,6 @@
     });
   });
 
-  // ---------- Shared helpers ----------
   function logTo(el, msg, kind = 'info') {
     const line = document.createElement('span');
     line.className = `line ${kind}`;
@@ -508,6 +842,7 @@
 
   uploadBtn.addEventListener('click', async () => {
     const url = document.getElementById('cdnUrl').value.trim();
+    const coverImg = document.getElementById('coverImg').value.trim();
     const userId = document.getElementById('userId').value.trim();
     const dateRaw = dateInput.value.trim();
     const likes = Number(document.getElementById('likes').value) || 0;
@@ -527,7 +862,7 @@
     setStatus(uploadStatusEl, 'Uploading', 'busy');
     logTo(uploadLogEl, `POST ${API_BASE}/api/upload-from-url`, 'info');
     logTo(uploadLogEl, `URL: ${url}`, 'info');
-    logTo(uploadLogEl, `user=${userId || '(default)'} date=${dateRaw || '(auto)'} likes=${likes}`, 'info');
+    logTo(uploadLogEl, `cover=${coverImg ? 'yes' : 'none'} user=${userId || '(default)'} date=${dateRaw || '(auto)'} likes=${likes}`, 'info');
 
     try {
       const res = await fetch(`${API_BASE}/api/upload-from-url`, {
@@ -538,6 +873,7 @@
           userId: userId || undefined,
           date: dateRaw || undefined,
           likes,
+          coverImg: coverImg || undefined,
         }),
       });
 
@@ -549,13 +885,15 @@
         return;
       }
 
-      logTo(uploadLogEl, `Uploaded: ${data.objectKey}`, 'ok');
+      logTo(uploadLogEl, `Uploaded: ${data.videoKey}`, 'ok');
+      if (data.coverKey) logTo(uploadLogEl, `Cover: ${data.coverKey}`, 'ok');
       if (data.bytes) logTo(uploadLogEl, `Size: ${data.bytes} bytes`, 'info');
       setStatus(uploadStatusEl, 'Done', 'done');
 
-      // Convenience: prefill the Download tab with the new key + user
-      document.getElementById('objectKey').value = data.objectKey || '';
+      document.getElementById('videoKey').value = data.videoKey || '';
+      document.getElementById('coverKey').value = data.coverKey || '';
       document.getElementById('downloadUserId').value = userId || '';
+      
     } catch (err) {
       logTo(uploadLogEl, `Request failed: ${err.message}`, 'err');
       setStatus(uploadStatusEl, 'Failed', 'failed');
@@ -564,58 +902,536 @@
     }
   });
 
-  // ---------- Download ----------
-  const downloadLogEl = document.getElementById('downloadLog');
-  const downloadStatusEl = document.getElementById('downloadStatus');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const previewEl = document.getElementById('preview');
-  const videoPlayer = document.getElementById('videoPlayer');
-  const previewMeta = document.getElementById('previewMeta');
+// ---------- Download ----------
+const downloadLogEl = document.getElementById('downloadLog');
+const downloadStatusEl = document.getElementById('downloadStatus');
 
-  downloadBtn.addEventListener('click', async () => {
-    const objectKey = document.getElementById('objectKey').value.trim();
-    const userId = document.getElementById('downloadUserId').value.trim();
+const downloadBtn = document.getElementById('downloadBtn');
+const previewEl = document.getElementById('preview');
+const videoPlayer = document.getElementById('videoPlayer');
+const previewMeta = document.getElementById('previewMeta');
 
-    if (!objectKey) {
-      logTo(downloadLogEl, 'Object key is required.', 'err');
+const coverBtn = document.getElementById('coverBtn');
+const coverPreviewEl = document.getElementById('coverPreview');
+const coverPlayer = document.getElementById('coverPlayer');
+const coverMeta = document.getElementById('coverMeta');
+
+downloadBtn.addEventListener('click', async () => {
+  const videoKey = document.getElementById('videoKey').value.trim();
+  const userId = document.getElementById('downloadUserId').value.trim();
+  
+  if (!videoKey) {
+    logTo(downloadLogEl, 'Video key is required.', 'err');
+    return;
+  }
+  
+  downloadBtn.disabled = true;
+  setStatus(downloadStatusEl, 'Signing', 'busy');
+  logTo(downloadLogEl, `GET ${API_BASE}/api/download-b2-file`, 'info');
+  logTo(downloadLogEl, `videoKey=${videoKey} user=${userId || '(default)'}`, 'info');
+  
+  try {
+    const params = new URLSearchParams({ videoKey });
+    if (userId) params.set('userId', userId);
+    
+    const res = await fetch(`${API_BASE}/api/download-b2-file?${params}`);
+    const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+    
+    if (!res.ok || !data.success) {
+      logTo(downloadLogEl, `Failed: ${data.error || 'unknown error'}`, 'err');
+      setStatus(downloadStatusEl, 'Failed', 'failed');
+      previewEl.classList.remove('active');
       return;
     }
+    
+    logTo(downloadLogEl, 'Video signed URL issued', 'ok');
+    logTo(downloadLogEl, data.downloadUrl, 'info');
+    setStatus(downloadStatusEl, 'Done', 'done');
+    
+    previewEl.classList.add('active');
+    videoPlayer.src = data.downloadUrl;
+    videoPlayer.load();
+    previewMeta.textContent = `Signed URL (expires in 5 min) · ${data.downloadUrl.slice(0, 80)}…`;
+  } catch (err) {
+    logTo(downloadLogEl, `Request failed: ${err.message}`, 'err');
+    setStatus(downloadStatusEl, 'Failed', 'failed');
+  } finally {
+    downloadBtn.disabled = false;
+  }
+});
 
-    downloadBtn.disabled = true;
-    setStatus(downloadStatusEl, 'Signing', 'busy');
-    logTo(downloadLogEl, `GET ${API_BASE}/api/download-b2-file`, 'info');
-    logTo(downloadLogEl, `objectKey=${objectKey} user=${userId || '(default)'}`, 'info');
+coverBtn.addEventListener('click', async () => {
+  const coverKey = document.getElementById('coverKey').value.trim();
+  const userId = document.getElementById('downloadUserId').value.trim();
+  
+  if (!coverKey) {
+    logTo(downloadLogEl, 'Cover key is required.', 'err');
+    return;
+  }
+  
+  coverBtn.disabled = true;
+  setStatus(downloadStatusEl, 'Signing', 'busy');
+  logTo(downloadLogEl, `GET ${API_BASE}/api/download-b2-cover`, 'info');
+  logTo(downloadLogEl, `coverKey=${coverKey} user=${userId || '(default)'}`, 'info');
+  
+  try {
+    const params = new URLSearchParams({ coverKey });
+    if (userId) params.set('userId', userId);
+    
+    const res = await fetch(`${API_BASE}/api/download-b2-cover?${params}`);
+    const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+    
+    if (!res.ok || !data.success) {
+      logTo(downloadLogEl, `Failed: ${data.error || 'unknown error'}`, 'err');
+      setStatus(downloadStatusEl, 'Failed', 'failed');
+      coverPreviewEl.classList.remove('active');
+      return;
+    }
+    
+    logTo(downloadLogEl, 'Cover signed URL issued', 'ok');
+    logTo(downloadLogEl, data.downloadUrl, 'info');
+    setStatus(downloadStatusEl, 'Done', 'done');
+    
+    coverPreviewEl.classList.add('active');
+    coverPlayer.src = data.downloadUrl;
+    coverMeta.textContent = `Signed URL (expires in 5 min) · ${data.downloadUrl.slice(0, 80)}…`;
+  } catch (err) {
+    logTo(downloadLogEl, `Request failed: ${err.message}`, 'err');
+    setStatus(downloadStatusEl, 'Failed', 'failed');
+  } finally {
+    coverBtn.disabled = false;
+  }
+});
+  
+</script>
+
+<script>
+
+  // ---------- Posts (separate Turso API) ----------
+  const POSTS_API = 'https://json-edit-seven.vercel.app/api/turso';
+
+  const postsTbody   = document.getElementById('posts-tbody');
+  const postsLogEl   = document.getElementById('postsLog');
+  const postsStatusEl = document.getElementById('postsStatus');
+  const postsBtn     = document.getElementById('postsBtn');
+  const postsLimit   = document.getElementById('postsLimit');
+  const urlEl        = document.getElementById('url');
+  const urlInput     = document.getElementById('cdnUrl');
+  const dateInputEl  = document.getElementById('postedDate');
+  const likesInput   = document.getElementById('likes');
+  const coverImgInput = document.getElementById('coverImg');
+
+  function postsSetStatus(text, cls) {
+    postsStatusEl.textContent = text;
+    postsStatusEl.className = `status ${cls || ''}`;
+  }
+  function postsLog(msg, kind = 'info') {
+    const line = document.createElement('span');
+    line.className = `line ${kind}`;
+    const time = new Date().toLocaleTimeString();
+    line.textContent = `[${time}] ${msg}`;
+    postsLogEl.appendChild(line);
+    postsLogEl.scrollTop = postsLogEl.scrollHeight;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  async function loadTopLikedPosts(n = 50) {
+    postsTbody.innerHTML = '<tr><td colspan="4" class="row-empty">Loading…</td></tr>';
+    postsSetStatus('Loading', 'busy');
+    postsLog(`GET ${POSTS_API}?action=getTopLikedPosts&n=${n}`, 'info');
 
     try {
-      const params = new URLSearchParams({ objectKey });
+      const res = await fetch(`${POSTS_API}?action=getTopLikedPosts&n=${n}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const { result } = await res.json();
+
+      if (!Array.isArray(result) || result.length === 0) {
+        postsTbody.innerHTML = '<tr><td colspan="4" class="row-empty">No posts.</td></tr>';
+        postsSetStatus('Empty', 'ready');
+        postsLog('No posts returned.', 'info');
+        return;
+      }
+
+      postsTbody.innerHTML = result.map((p, i) => `
+        <tr
+          data-link="${escHtml(p.Link || '')}"
+          data-image="${escHtml(p.CoverImage || '')}"
+          data-likes="${Number(p.Likes) || 0}"
+          data-date="${escHtml(p.Date || '')}"
+        >
+          <td class="col-sno">${i + 1}</td>
+          <td class="col-cover">
+            ${p.CoverImage
+              ? `<img src="${escHtml(p.CoverImage)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+              : `<div class="no-cover"></div>`}
+          </td>
+          <td class="col-likes">${Number(p.Likes || 0).toLocaleString()}</td>
+          <td class="col-date">${escHtml(p.Date || '')}</td>
+        </tr>
+      `).join('');
+
+      postsTbody.querySelectorAll('tr[data-link]').forEach(tr => {
+        tr.addEventListener('click', async () => {
+          postsTbody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+          tr.classList.add('selected');
+
+          const link  = tr.getAttribute('data-link');
+          const image = tr.getAttribute('data-image');
+          const likes = Number(tr.getAttribute('data-likes')) || 0;
+          const date  = tr.getAttribute('data-date');
+
+          urlEl.value = link;
+          urlInput.value = link;
+          likesInput.value = likes;
+          dateInputEl.value = date;
+          coverImgInput.value = image;
+
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'upload'));
+          document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'upload'));
+
+          if (!link) return;
+          try {
+            await navigator.clipboard.writeText(link);
+            postsLog('Link copied to clipboard.', 'ok');
+            postsSetStatus('Copied', 'done');
+          } catch {
+            const ta = document.createElement('textarea');
+            ta.value = link;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+            postsLog('Link copied to clipboard.', 'ok');
+            postsSetStatus('Copied', 'done');
+          }
+        });
+      });
+
+      postsSetStatus('Loaded', 'done');
+      postsLog(`Loaded ${result.length} posts.`, 'ok');
+    } catch (err) {
+      postsTbody.innerHTML = `<tr><td colspan="4" class="row-error">Failed: ${escHtml(err.message)}</td></tr>`;
+      postsSetStatus('Failed', 'failed');
+      postsLog(`Failed: ${err.message}`, 'err');
+    }
+  }
+
+  postsBtn.addEventListener('click', () => {
+    const n = Math.max(1, Math.min(500, Number(postsLimit.value) || 50));
+    loadTopLikedPosts(n);
+  });
+
+  loadTopLikedPosts(50);
+</script>
+
+<script>
+  (() => {
+    const API_BASE = 'https://b2-turso-vercel.vercel.app';
+    const POSTS_API = 'https://json-edit-seven.vercel.app/api/turso';
+
+    const bulkTbody    = document.getElementById('bulk-tbody');
+    const bulkLogEl    = document.getElementById('bulkLog');
+    const bulkStatusEl = document.getElementById('bulkStatus');
+    const bulkLoadBtn  = document.getElementById('bulkLoadBtn');
+    const bulkLimit    = document.getElementById('bulkLimit');
+    const bulkSkip     = document.getElementById('bulkSkip');
+
+    const setStatus = (text, cls) => {
+      bulkStatusEl.textContent = text;
+      bulkStatusEl.className = `status ${cls || ''}`;
+    };
+    const log = (msg, kind = 'info') => {
+      const line = document.createElement('span');
+      line.className = `line ${kind}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      bulkLogEl.appendChild(line);
+      bulkLogEl.scrollTop = bulkLogEl.scrollHeight;
+    };
+    const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+
+    function renderRow(i, coverUrl, status, cls, key) {
+      const tr = bulkTbody.querySelector(`tr[data-idx="${i}"]`);
+      if (!tr) return;
+      tr.querySelector('.cell-status').textContent = status;
+      tr.querySelector('.cell-status').className = `cell-status ${cls}`;
+      tr.querySelector('.col-key').textContent = key || '';
+    }
+
+    async function uploadOne(item) {
+      const res = await fetch(`${API_BASE}/api/upload-from-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: item.Link,
+          coverImg: item.CoverImage || undefined,
+          userId: 'jafernegery',
+          date: item.Date || undefined,
+          likes: Number(item.Likes) || 0,
+        }),
+      });
+      const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    bulkLoadBtn.addEventListener('click', async () => {
+      const n = Math.max(1, Math.min(200, Number(bulkLimit.value) || 10));
+      const skip = Math.max(0, Number(bulkSkip.value) || 0);
+
+      bulkLoadBtn.disabled = true;
+      setStatus('Fetching posts', 'busy');
+      bulkTbody.innerHTML = '<tr><td colspan="4" class="row-empty">Loading…</td></tr>';
+      log(`GET ${POSTS_API}?action=getTopLikedPosts&n=${n}`, 'info');
+      if (skip > 0) log(`Skipping first ${skip} item(s)`, 'info');
+
+      let items;
+      try {
+        const res = await fetch(`${POSTS_API}?action=getTopLikedPosts&n=${n}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const { result } = await res.json();
+        const all = (result || []).filter(p => p && p.Link);
+        items = all.slice(skip);
+
+        if (all.length > 0 && items.length === 0) {
+          bulkTbody.innerHTML = `<tr><td colspan="4" class="row-empty">All ${all.length} item(s) skipped (skip=${skip}).</td></tr>`;
+          setStatus('Nothing to do', 'ready');
+          log(`Nothing left after skipping ${skip} of ${all.length}.`, 'info');
+          bulkLoadBtn.disabled = false;
+          return;
+        }
+      } catch (err) {
+        bulkTbody.innerHTML = `<tr><td colspan="4" class="row-error">Fetch failed: ${escHtml(err.message)}</td></tr>`;
+        setStatus('Failed', 'failed');
+        log(`Fetch failed: ${err.message}`, 'err');
+        bulkLoadBtn.disabled = false;
+        return;
+      }
+
+      if (items.length === 0) {
+        bulkTbody.innerHTML = '<tr><td colspan="4" class="row-empty">No posts returned.</td></tr>';
+        setStatus('Empty', 'ready');
+        log('No posts to upload.', 'info');
+        bulkLoadBtn.disabled = false;
+        return;
+      }
+
+      bulkTbody.innerHTML = items.map((p, i) => `
+        <tr data-idx="${i}">
+          <td class="col-sno">${skip + i + 1}</td>
+          <td class="col-cover">
+            ${p.CoverImage
+              ? `<img src="${escHtml(p.CoverImage)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+              : `<div class="no-cover"></div>`}
+          </td>
+          <td class="cell-status pending">Queued</td>
+          <td class="col-key"></td>
+        </tr>
+      `).join('');
+
+      setStatus(`Running ${items.length}`, 'busy');
+      log(`Queue: ${items.length} item(s)`, 'info');
+
+      let ok = 0, fail = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        renderRow(i, item.CoverImage, 'Uploading…', 'running', '');
+        log(`[${skip + i + 1}/${skip + items.length}] ${item.Link.slice(0, 70)}…`, 'info');
+
+        try {
+          const data = await uploadOne(item);
+          ok++;
+          renderRow(i, item.CoverImage, 'OK', 'ok', data.videoKey);
+          log(`  → ${data.videoKey}${data.coverKey ? ' + cover' : ''}${data.bytes ? ` (${data.bytes} bytes)` : ''}`, 'ok');
+        } catch (err) {
+          fail++;
+          renderRow(i, item.CoverImage, `Fail: ${err.message.slice(0, 30)}`, 'fail', '');
+          log(`  → ${err.message}`, 'err');
+        }
+
+        setStatus(`${ok} ok · ${fail} fail`, fail ? 'failed' : 'busy');
+      }
+
+      setStatus(`Done — ${ok} ok · ${fail} fail`, fail ? 'failed' : 'done');
+      log(`Finished. ${ok} succeeded, ${fail} failed.`, fail ? 'err' : 'ok');
+      bulkLoadBtn.disabled = false;
+    });
+  })();
+</script>
+
+<script>
+  (() => {
+    const API_BASE = 'https://b2-turso-vercel.vercel.app';
+
+    const bulkDlTbody  = document.getElementById('bulkdl-tbody');
+    const bulkDlLogEl  = document.getElementById('bulkDlLog');
+    const bulkDlStatusEl = document.getElementById('bulkDlStatus');
+    const bulkDlBtn    = document.getElementById('bulkDlBtn');
+    const bulkDlUserId = document.getElementById('bulkDlUserId');
+    const bulkDlSource = document.getElementById('bulkDlSource');
+    const bulkDlManualField = document.getElementById('bulkDlManualField');
+    const bulkDlKeys   = document.getElementById('bulkDlKeys');
+
+    const setStatus = (text, cls) => {
+      bulkDlStatusEl.textContent = text;
+      bulkDlStatusEl.className = `status ${cls || ''}`;
+    };
+    const log = (msg, kind = 'info') => {
+      const line = document.createElement('span');
+      line.className = `line ${kind}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      bulkDlLogEl.appendChild(line);
+      bulkDlLogEl.scrollTop = bulkDlLogEl.scrollHeight;
+    };
+    const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+    const fmtBytes = (b) => {
+      if (!b || b < 0) return '—';
+      if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+      if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+      return Math.round(b / 1024) + ' KB';
+    };
+
+    bulkDlSource.addEventListener('change', () => {
+      bulkDlManualField.style.display =
+        bulkDlSource.value === 'manual' ? '' : 'none';
+    });
+
+    function renderRow(i, status, cls) {
+      const tr = bulkDlTbody.querySelector(`tr[data-idx="${i}"]`);
+      if (!tr) return;
+      tr.querySelector('.cell-status').textContent = status;
+      tr.querySelector('.cell-status').className = `cell-status ${cls}`;
+    }
+
+    // Trigger a browser download from a signed URL without navigating away.
+    function triggerDownload(url, filename) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || '';
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => a.remove(), 1000);
+    }
+
+    async function signOne(videoKey, userId) {
+      const params = new URLSearchParams({ videoKey });
       if (userId) params.set('userId', userId);
 
       const res = await fetch(`${API_BASE}/api/download-b2-file?${params}`);
       const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      return data.downloadUrl;
+    }
 
-      if (!res.ok || !data.success) {
-        logTo(downloadLogEl, `Failed: ${data.error || 'unknown error'}`, 'err');
-        setStatus(downloadStatusEl, 'Failed', 'failed');
-        previewEl.classList.remove('active');
+    async function fetchKeysFromTurso(userId) {
+      const params = new URLSearchParams();
+      if (userId) params.set('userId', userId);
+
+      const res = await fetch(`${API_BASE}/api/known-video-keys?${params}`);
+      const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      return Array.isArray(data.items) ? data.items : [];
+    }
+
+    bulkDlBtn.addEventListener('click', async () => {
+      const userId = bulkDlUserId.value.trim();
+      const source = bulkDlSource.value;
+
+      bulkDlBtn.disabled = true;
+      setStatus('Preparing', 'busy');
+      bulkDlTbody.innerHTML = '<tr><td colspan="4" class="row-empty">Loading…</td></tr>';
+
+      let items = [];
+      try {
+        if (source === 'manual') {
+          const keys = bulkDlKeys.value
+            .split('\n')
+            .map(l => l.trim())
+            .filter(Boolean);
+          if (keys.length === 0) throw new Error('Paste at least one video key.');
+          items = keys.map(k => ({ videoKey: k, fileSize: null }));
+          log(`Manual queue: ${items.length} key(s)`, 'info');
+        } else {
+          log(`GET ${API_BASE}/api/known-video-keys?userId=${userId || '(default)'}`, 'info');
+          items = await fetchKeysFromTurso(userId);
+          log(`Turso queue: ${items.length} item(s)`, 'info');
+        }
+      } catch (err) {
+        bulkDlTbody.innerHTML = `<tr><td colspan="4" class="row-error">Prepare failed: ${escHtml(err.message)}</td></tr>`;
+        setStatus('Failed', 'failed');
+        log(`Prepare failed: ${err.message}`, 'err');
+        bulkDlBtn.disabled = false;
         return;
       }
 
-      logTo(downloadLogEl, 'Signed URL issued', 'ok');
-      logTo(downloadLogEl, data.downloadUrl, 'info');
-      setStatus(downloadStatusEl, 'Done', 'done');
+      if (items.length === 0) {
+        bulkDlTbody.innerHTML = '<tr><td colspan="4" class="row-empty">Nothing to download.</td></tr>';
+        setStatus('Empty', 'ready');
+        log('Nothing to download.', 'info');
+        bulkDlBtn.disabled = false;
+        return;
+      }
 
-      // Show a playable preview — the URL expires (5 min default)
-      previewEl.classList.add('active');
-      videoPlayer.src = data.downloadUrl;
-      videoPlayer.load();
-      previewMeta.textContent = `Signed URL (expires in 5 min) · ${data.downloadUrl.slice(0, 80)}…`;
-    } catch (err) {
-      logTo(downloadLogEl, `Request failed: ${err.message}`, 'err');
-      setStatus(downloadStatusEl, 'Failed', 'failed');
-    } finally {
-      downloadBtn.disabled = false;
-    }
-  });
+      bulkDlTbody.innerHTML = items.map((it, i) => `
+        <tr data-idx="${i}">
+          <td class="col-sno">${i + 1}</td>
+          <td class="col-key-text" title="${escHtml(it.videoKey)}">${escHtml(it.videoKey)}</td>
+          <td class="col-date">${it.fileSize ? fmtBytes(it.fileSize) : '—'}</td>
+          <td class="cell-status pending">Queued</td>
+        </tr>
+      `).join('');
+
+      setStatus(`Running ${items.length}`, 'busy');
+      let ok = 0, fail = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        renderRow(i, 'Signing…', 'running');
+        log(`[${i + 1}/${items.length}] ${it.videoKey}`, 'info');
+
+        try {
+          const url = await signOne(it.videoKey, userId);
+          renderRow(i, 'Downloading…', 'running');
+          triggerDownload(url, it.videoKey);
+          ok++;
+          renderRow(i, 'Done', 'ok');
+          log(`  → downloaded`, 'ok');
+        } catch (err) {
+          fail++;
+          renderRow(i, `Fail: ${err.message.slice(0, 30)}`, 'fail');
+          log(`  → ${err.message}`, 'err');
+        }
+
+        setStatus(`${ok} ok · ${fail} fail`, fail ? 'failed' : 'busy');
+
+        // Small pause between downloads so the browser can flush the previous one
+        await new Promise(r => setTimeout(r, 800));
+      }
+
+      setStatus(`Done — ${ok} ok · ${fail} fail`, fail ? 'failed' : 'done');
+      log(`Finished. ${ok} downloaded, ${fail} failed.`, fail ? 'err' : 'ok');
+      bulkDlBtn.disabled = false;
+    });
+  })();
 </script>
 
 </body>
