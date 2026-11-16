@@ -457,4 +457,36 @@ app.get('/api/b2-files-count', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+app.get('/api/download-links-view', async (c) => {
+  try {
+    const db = turso();
+    const userId = c.req.query('userId') || 'user_123';
+
+    const rows = await db.execute({
+      sql: `SELECT video_key, user_id, video_url, cover_url,
+                   file_size, created_at, likes, posted_date
+            FROM download_links_view
+            WHERE user_id = ?
+            ORDER BY likes DESC, posted_date DESC, video_key`,
+      args: [userId],
+    });
+
+    return c.json({
+      success: true,
+      items: rows.rows.map(r => ({
+        videoKey: r.video_key,
+        userId: r.user_id,
+        videoUrl: r.video_url,
+        coverUrl: r.cover_url,
+        fileSize: r.file_size,
+        createdAt: r.created_at,
+        likes: r.likes,
+        postedDate: r.posted_date,
+      })),
+    });
+  } catch (error) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 export default app;
