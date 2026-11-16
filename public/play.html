@@ -605,20 +605,43 @@ if (!API_KEY) showAuthOverlay('');
         });
 
         playTbody.querySelectorAll('button[data-role="download"]').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const tr = btn.closest('tr');
-    const url = tr.getAttribute('data-url');
-    const vidname = tr.getAttribute('data-vidname') || tr.getAttribute('data-key') || 'video.mp4';
-    if (!url) return;
+    const key = tr.getAttribute('data-key');
+    const vidname = tr.getAttribute('data-vidname') || key || 'video.mp4';
+    if (!key) return log('No key on this row.', 'err');
     
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = vidname;
-    a.rel = 'noopener';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => a.remove(), 1000);
+    btn.disabled = true;
+    log(`Requesting download URL for ${key}…`, 'info');
+    setStatus('Signing', 'busy');
+    
+    try {
+      const params = new URLSearchParams({
+        videoKey: key,
+        userId: playUserId.value.trim() || 'user_123',
+        disposition: 'attachment',
+      });
+      const res = await fetch(`${API_BASE}/api/download-b2-file?${params}`);
+      const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      
+      const a = document.createElement('a');
+      a.href = data.downloadUrl;
+      a.download = vidname;
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => a.remove(), 1000);
+      
+      log(`Download triggered for ${vidname}`, 'ok');
+      setStatus('Triggered', 'done');
+    } catch (err) {
+      log(`Download failed: ${err.message}`, 'err');
+      setStatus('Download failed', 'failed');
+    } finally {
+      btn.disabled = false;
+    }
   });
 });
 
