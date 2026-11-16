@@ -114,97 +114,117 @@
     color: var(--text-faint); cursor: not-allowed; box-shadow: none;
   }
 
+  /* ============================================================
+     Links table — single coherent block, no duplicate rules
+     ============================================================ */
   .table-wrap {
-    background: var(--code-bg); border: 1px solid var(--border);
-    border-radius: 5px; overflow: hidden; margin-top: 8px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 8px;
   }
+
   .links-table {
-    width: 100%; border-collapse: collapse; font-family: inherit;
-    font-size: 10.5px; color: var(--text-dim); table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    font-family: inherit;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    table-layout: fixed;
   }
+
   .links-table thead { background: var(--bg-2); }
+
   .links-table th {
-    font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.1em; color: var(--teal-dim); text-align: left;
-    padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--teal-dim);
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
   }
 
-  /* ---- Viewport-aware column widths ---- */
-  /* Defaults: narrow phones (320-374px) — likes hidden */
-  .links-table th.col-sno     { width: 28px;  text-align: center; }
-  .links-table th.col-cover   { width: 56px; }
-  .links-table th.col-likes   { display: none; }
-  .links-table th.col-size    { width: 60px;  text-align: right; }
-  .links-table th.col-actions { width: 130px; text-align: right; }
+  /* Column widths — one set, no overrides */
+  .links-table th.col-sno     { width: 32px; text-align: center; }
+  .links-table th.col-cover   { width: 24px; }
+  .links-table th.col-likes   { width: 16%; text-align: right; }
+  .links-table th.col-size    { width: 21%; text-align: right; }
+  .links-table th.col-actions { width: auto; text-align: right; }
 
-  /* Mid phones (375-413px) — all columns, tight actions */
-  @media (min-width: 375px) {
-    .links-table th.col-sno     { width: 32px; }
-    .links-table th.col-likes   { display: table-cell; width: 56px; text-align: right; }
-    .links-table th.col-size    { width: 62px; }
-    .links-table th.col-actions { width: 127px; }
+  .links-table tbody tr {
+    border-bottom: 1px solid var(--border);
   }
-
-  /* Larger (414px+) — comfortable spacing */
-  @media (min-width: 414px) {
-    .links-table th.col-sno     { width: 36px; }
-    .links-table th.col-likes   { width: 64px; }
-    .links-table th.col-size    { width: 70px; }
-    .links-table th.col-actions { width: auto; }
-  }
-
-  .links-table tbody tr { border-bottom: 1px solid var(--border); }
   .links-table tbody tr:last-child { border-bottom: none; }
   .links-table tbody tr:hover { background: var(--bg-2); }
   .links-table tbody tr.selected { background: rgba(20,240,200,0.08); }
+
   .links-table td {
-    padding: 6px 6px; vertical-align: middle;
-    color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    padding: 6px 6px;
+    vertical-align: middle;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  @media (min-width: 414px) {
-    .links-table td { padding: 6px 8px; }
-  }
+
   .links-table td.col-sno { text-align: center; color: var(--text-faint); }
   .links-table td.col-likes {
-    text-align: right; color: var(--teal);
-    font-variant-numeric: tabular-nums; font-weight: 600;
-    display: none;
-  }
-  @media (min-width: 375px) {
-    .links-table td.col-likes { display: table-cell; }
+    text-align: right;
+    color: var(--teal);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
   }
   .links-table td.col-size { text-align: right; color: var(--text-faint); }
   .links-table td.col-actions { text-align: right; white-space: nowrap; }
+
   .links-table td.col-cover { padding: 4px 6px; }
-  @media (min-width: 414px) {
-    .links-table td.col-cover { padding: 4px 8px; }
-  }
   .links-table td.col-cover img {
-   height: 40px; max-width: 40px;
-    object-fit: cover;
-    border-radius: 4px; border: 1px solid var(--border);
-    background: var(--bg-3); display: block;
+    height: 40px;
+    width: auto;
+    display: block;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-3);
   }
   .links-table td.col-cover .no-cover {
-    width: 40px; height: 40px; max-width: 40px;
-    border-radius: 4px; border: 1px dashed var(--border); background: var(--bg-3);
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    border: 1px dashed var(--border);
+    background: var(--bg-3);
   }
+
   .links-table .row-empty { padding: 14px 10px; text-align: center; color: var(--text-faint); }
   .links-table .row-error { padding: 14px 10px; text-align: center; color: var(--accent-error); }
 
   .action-btn {
-    font-family: inherit; font-size: 9px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    padding: 3px 5px; border-radius: 3px; border: 1px solid var(--border);
-    background: var(--bg-3); color: var(--teal-dim); cursor: pointer;
-    margin-left: 3px; transition: all 0.15s ease;
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--bg-3);
+    color: var(--teal-dim);
+    cursor: pointer;
+    margin-left: 4px;
+    transition: all 0.15s ease;
   }
-  @media (min-width: 414px) {
-    .action-btn { padding: 3px 7px; margin-left: 4px; letter-spacing: 0.08em; }
+  .action-btn:hover:not(:disabled) {
+    color: var(--teal);
+    border-color: var(--teal);
+    box-shadow: 0 0 8px -1px var(--teal-glow);
   }
-  .action-btn:hover:not(:disabled) { color: var(--teal); border-color: var(--teal); box-shadow: 0 0 8px -1px var(--teal-glow); }
   .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .action-btn[data-role="play"] { margin-left: 0; }
+
+  /* ============================================================ */
 
   .player {
     margin-top: 12px; background: var(--code-bg);
@@ -297,15 +317,14 @@
   <h1>B2 + Turso</h1>
   <span class="sub">Playback Test</span>
   <nav class="page-nav">
-    <a href="/" class="page-link">Upload</a>
-    <a href="/files" class="page-link">Files</a>
+    <a href="/index.html" class="page-link">Upload</a>
+    <a href="/files.html" class="page-link">Files</a>
   </nav>
 </header>
 
 <main>
   <div class="content">
     <h2>Play stored URLs</h2>
-    <p class="lead">Loads every row from <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;color:var(--teal);font-size:10px;">download_links_view</code> (a join of <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;color:var(--teal);font-size:10px;">download_links</code> and <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;color:var(--teal);font-size:10px;">b2_files</code>), ordered by likes. The stored <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;color:var(--teal);font-size:10px;">video_url</code> is played directly, with <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;color:var(--teal);font-size:10px;">cover_url</code> as poster.</p>
 
     <div class="field">
       <label for="playUserId">User ID</label>
