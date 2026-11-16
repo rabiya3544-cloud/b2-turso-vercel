@@ -47,10 +47,22 @@ function turso() {
 
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
   c.header('Cache-Control', 'no-store');
   if (c.req.method === 'OPTIONS') return c.body(null, 204);
+  await next();
+});
+
+app.use('/api/*', async (c, next) => {
+  const expected = process.env.API_PASSWORD;
+  if (!expected) {
+    return c.json({ success: false, error: 'Server misconfigured: API_PASSWORD not set' }, 500);
+  }
+  const provided = c.req.header('X-API-Key') || '';
+  if (provided !== expected) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
   await next();
 });
 
