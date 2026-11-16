@@ -464,7 +464,7 @@ app.get('/api/download-links-view', async (c) => {
     const userId = c.req.query('userId') || 'user_123';
 
     const rows = await db.execute({
-      sql: `SELECT video_key, user_id, video_url, cover_url,
+      sql: `SELECT video_key, user_id, cover_key, video_url, cover_url,
                    file_size, created_at, likes, posted_date
             FROM download_links_view
             WHERE user_id = ?
@@ -477,6 +477,7 @@ app.get('/api/download-links-view', async (c) => {
       items: rows.rows.map(r => ({
         videoKey: r.video_key,
         userId: r.user_id,
+        coverKey: r.cover_key,
         videoUrl: r.video_url,
         coverUrl: r.cover_url,
         fileSize: r.file_size,
