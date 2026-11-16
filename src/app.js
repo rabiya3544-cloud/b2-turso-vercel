@@ -243,11 +243,11 @@ app.get('/api/download-b2-file', async (c) => {
   try {
     const client = s3();
     const db = turso();
-
+    
     const videoKey = c.req.query('videoKey');
     const userId = c.req.query('userId') || 'user_123';
     if (!videoKey) throw new Error('videoKey required');
-
+    
     const check = await db.execute({
       sql: `SELECT video_key FROM b2_files
             WHERE video_key = ? AND user_id = ?`,
@@ -256,14 +256,22 @@ app.get('/api/download-b2-file', async (c) => {
     if (check.rows.length === 0) {
       return c.json({ success: false, error: 'Not found' }, 404);
     }
+    
+    const disposition = c.req.query('disposition') || 'inline';
 
-    const command = new GetObjectCommand({
-      Bucket: process.env.B2_BUCKET_NAME,
-      Key: videoKey,
-    });
-    const downloadUrl = await getSignedUrl(client, command, { expiresIn: 259200 });
+const command = {
+  Bucket: process.env.B2_BUCKET_NAME,
+  Key: videoKey,
+};
 
-    return c.json({ success: true, downloadUrl });
+if (disposition === 'attachment') {
+  command.ResponseContentDisposition = `attachment; filename="${videoKey}"`;
+}
+
+const downloadUrl = await getSignedUrl(client, new GetObjectCommand(command), { expiresIn: 259200 });
+
+return c.json({ success: true, downloadUrl });
+    
   } catch (error) {
     return c.json({ success: false, error: error.message }, 500);
   }
