@@ -18,14 +18,17 @@ function s3() {
     endpoint = endpoint.replace(/\/+$/, '');
     const region = new URL(endpoint).hostname.split('.')[1];
     _s3 = new S3Client({
-      endpoint,
-      region,
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: process.env.B2_APPLICATION_KEY_ID,
-        secretAccessKey: process.env.B2_APPLICATION_KEY,
-      },
-    });
+  endpoint,
+  region,
+  forcePathStyle: true,
+  // Disable checksum modes that B2 doesn't support
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+  responseChecksumValidation: 'WHEN_REQUIRED',
+  credentials: {
+    accessKeyId: process.env.B2_APPLICATION_KEY_ID,
+    secretAccessKey: process.env.B2_APPLICATION_KEY,
+  },
+});
   }
   return _s3;
 }
