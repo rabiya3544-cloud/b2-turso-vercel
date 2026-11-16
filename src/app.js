@@ -63,6 +63,32 @@ app.get('/', async (c) => {
   }
 });
 
+app.get('/files', async (c) => {
+  const html = await readFile(join(process.cwd(), 'public/files.html'), 'utf-8');
+  return c.html(html);
+});
+
+app.get('/play', async (c) => {
+  const html = await readFile(join(process.cwd(), 'public/play.html'), 'utf-8');
+  return c.html(html);
+});
+
+app.get('/debug/files', async (c) => {
+  const { readdir } = await import('fs/promises');
+  try {
+    const cwd = process.cwd();
+    const root = await readdir(cwd);
+    let publicDir = null;
+    try {
+      publicDir = await readdir(join(cwd, 'public'));
+    } catch (e) {
+      publicDir = `error: ${e.message}`;
+    }
+    return c.json({ cwd, root, public: publicDir });
+  } catch (e) {
+    return c.json({ error: e.message }, 500);
+  }
+});
 const ALLOWED_HOSTS = /(^|\.)(tiktokv|tiktokcdn|byteoversea|ibytedtos|muscdn|tos-)\.com$/i;
 const MAX_BYTES = 300 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 90_000;
