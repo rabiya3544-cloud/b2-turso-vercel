@@ -265,7 +265,10 @@ const command = {
 };
 
 if (disposition === 'attachment') {
-  command.ResponseContentDisposition = `attachment; filename="${videoKey}"`;
+  const filename = `${userId}_${videoKey}`;
+const encoded = encodeURIComponent(filename);
+command.ResponseContentDisposition =
+  `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`;
 }
 
 const downloadUrl = await getSignedUrl(client, new GetObjectCommand(command), { expiresIn: 259200 });
