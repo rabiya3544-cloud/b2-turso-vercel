@@ -185,7 +185,36 @@ app.post('/api/upload-from-url', async (c) => {
 
     if (!upstream.ok) {
       clearTimeout(timer);
-      return c.json({ success: false, error: `upstream HTTP ${upstream.status}` }, 502);
+
+      let coverKey = null;
+      try {
+        coverKey = await uploadImageFromUrl(client, coverImg);
+      } catch (e) {
+        console.error('Cover upload failed:', e.message);
+      }
+
+      const failedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
+      const failedLikes = Number.isInteger(likes) && likes >= 0 ? likes : 0;
+
+      let failedId = null;
+      try {
+        const ins = await db.execute({
+          sql: `INSERT INTO failed_uploads
+                  (video_url, cover_key, user_id, date, likes, error)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+          args: [url, coverKey, failedUserId, date || null, failedLikes, `upstream HTTP ${upstream.status}`],
+        });
+        failedId = ins.lastInsertRowid ?? null;
+      } catch (e) {
+        console.error('failed_uploads insert failed:', e.message);
+      }
+
+      return c.json({
+        success: false,
+        error: `upstream HTTP ${upstream.status}`,
+        coverKey: coverKey || null,
+        failedId,
+      }, 502);
     }
 
     const contentLength = Number(upstream.headers.get('content-length')) || 0;
