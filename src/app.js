@@ -6,7 +6,6 @@ import { createClient } from '@libsql/client';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import filesApp from './files.js';
-import tikcdnApp from './tikcdn.js';
 
 const app = new Hono();
 
@@ -54,8 +53,6 @@ app.use('*', async (c, next) => {
   if (c.req.method === 'OPTIONS') return c.body(null, 204);
   await next();
 });
-
-app.route('/api/tikcdn', tikcdnApp);
 
 app.use('/api/*', async (c, next) => {
   const expected = process.env.API_PASSWORD;
