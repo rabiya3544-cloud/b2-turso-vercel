@@ -66,6 +66,40 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
+// ⚠️ DANGEROUS: exposes B2 write credentials to the browser.
+// Remove this route AND rotate B2 keys immediately after debugging.
+app.get('/api/config', async (c) => {
+  const endpoint = process.env.B2_ENDPOINT_URL || '';
+  let region = null, host = null;
+  try {
+    const u = new URL(endpoint);
+    region = u.hostname.split('.')[1] || null;
+    host = u.hostname;
+  } catch {}
+
+  return c.json({
+    success: true,
+    // ⚠️ secrets — visible to anyone with DevTools open
+    b2: {
+      endpointUrl: endpoint,
+      region,
+      host,
+      bucketName: process.env.B2_BUCKET_NAME || null,
+      applicationKeyId: process.env.B2_APPLICATION_KEY_ID || null,
+      applicationKey: process.env.B2_APPLICATION_KEY || null,
+    },
+    turso: {
+      databaseHost: (() => {
+        try { return new URL(process.env.TURSO_DATABASE_URL).host; }
+        catch { return null; }
+      })(),
+      // deliberately NOT including TURSO_AUTH_TOKEN
+    },
+    deployment: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || null,
+    warning: 'DEBUG CONFIG — contains B2 write credentials. Remove + rotate.',
+  });
+});
+
 app.get('/', async (c) => {
   try {
     const html = await readFile(join(process.cwd(), 'public/index.html'), 'utf-8');
