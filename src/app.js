@@ -9,17 +9,17 @@ import filesApp from './files.js';
 
 const app = new Hono();
 
-// ============ B2 client cache (per bucket type) ============
+// ============ B2 client cache (per b2_group) ============
 
 const _s3Clients = {};
 
-function normalizeB2Type(b2Type) {
-  const n = Number(b2Type);
+function normalizeB2Group(b2Group) {
+  const n = Number(b2Group);
   return n === 1 || n === 2 ? n : 0;
 }
 
-function s3(b2Type = 0) {
-  const t = normalizeB2Type(b2Type);
+function s3(b2Group = 0) {
+  const t = normalizeB2Group(b2Group);
   if (_s3Clients[t]) return _s3Clients[t];
 
   let endpoint = process.env.B2_ENDPOINT_URL;
@@ -51,8 +51,8 @@ function s3(b2Type = 0) {
   return _s3Clients[t];
 }
 
-function getBucketForType(b2Type) {
-  switch (normalizeB2Type(b2Type)) {
+function getBucketForGroup(b2Group) {
+  switch (normalizeB2Group(b2Group)) {
     case 1: return process.env.B2_BUCKET_NAME_ONE;
     case 2: return process.env.B2_BUCKET_NAME_TWO;
     case 0:
@@ -226,12 +226,12 @@ app.post('/api/upload-from-url', async (c) => {
   try {
     const db = turso();
 
-    const { url, userId, date, likes, coverImg, b2Type } = await c.req.json();
+    const { url, userId, date, likes, coverImg, b2Group } = await c.req.json();
     if (!url) throw new Error('url required');
 
-    const resolvedB2Type = normalizeB2Type(b2Type);
-    const client = s3(resolvedB2Type);
-    const bucket = getBucketForType(resolvedB2Type);
+    const resolvedB2Group = normalizeB2Group(b2Group);
+    const client = s3(resolvedB2Group);
+    const bucket = getBucketForGroup(resolvedB2Group);
 
     const parsed = new URL(url);
     if (!/^https?:$/.test(parsed.protocol)) throw new Error('only http(s) URLs');
@@ -326,9 +326,9 @@ app.post('/api/upload-from-url', async (c) => {
 
     await db.execute({
       sql: `INSERT INTO b2_files
-              (video_key, cover_key, user_id, likes, posted_date, file_size, b2_type)
+              (video_key, cover_key, user_id, likes, posted_date, file_size, b2_group)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [filename, coverKey, resolvedUserId, initialLikes, postedDate, contentLength || null, resolvedB2Type],
+      args: [filename, coverKey, resolvedUserId, initialLikes, postedDate, contentLength || null, resolvedB2Group],
     });
 
     return c.json({
@@ -336,7 +336,7 @@ app.post('/api/upload-from-url', async (c) => {
       videoKey: filename,
       coverKey: coverKey || null,
       bytes: contentLength || null,
-      b2Type: resolvedB2Type,
+      b2Group: resolvedB2Group,
     });
   } catch (error) {
     console.error('Upload Error:', error.message);
@@ -355,7 +355,7 @@ app.get('/api/download-b2-file', async (c) => {
     if (!videoKey) throw new Error('videoKey required');
 
     const check = await db.execute({
-      sql: `SELECT video_key, b2_type FROM b2_files
+      sql: `SELECT video_key, b2_group FROM b2_files
             WHERE video_key = ? AND user_id = ?`,
       args: [videoKey, userId],
     });
@@ -363,9 +363,9 @@ app.get('/api/download-b2-file', async (c) => {
       return c.json({ success: false, error: 'Not found' }, 404);
     }
 
-    const b2Type = check.rows[0].b2_type;
-    const client = s3(b2Type);
-    const bucket = getBucketForType(b2Type);
+    const b2Group = check.rows[0].b2_group;
+    const client = s3(b2Group);
+    const bucket = getBucketForGroup(b2Group);
 
     const disposition = c.req.query('disposition') || 'inline';
 
@@ -399,7 +399,7 @@ app.get('/api/download-b2-cover', async (c) => {
     if (!coverKey) throw new Error('coverKey required');
 
     const check = await db.execute({
-      sql: `SELECT cover_key, b2_type FROM b2_files
+      sql: `SELECT cover_key, b2_group FROM b2_files
             WHERE cover_key = ? AND user_id = ?`,
       args: [coverKey, userId],
     });
@@ -407,9 +407,9 @@ app.get('/api/download-b2-cover', async (c) => {
       return c.json({ success: false, error: 'Not found' }, 404);
     }
 
-    const b2Type = check.rows[0].b2_type;
-    const client = s3(b2Type);
-    const bucket = getBucketForType(b2Type);
+    const b2Group = check.rows[0].b2_group;
+    const client = s3(b2Group);
+    const bucket = getBucketForGroup(b2Group);
 
     const command = new GetObjectCommand({
       Bucket: bucket,
@@ -459,9 +459,9 @@ app.post('/api/download-links/sync', async (c) => {
     const { userId } = await c.req.json();
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
 
-    // All videos the user owns in b2_files (include b2_type)
+    // All videos the user owns in b2_files (include b2_group)
     const allVideos = await db.execute({
-      sql: `SELECT video_key, cover_key, file_size, b2_type
+      sql: `SELECT video_key, cover_key, file_size, b2_group
             FROM b2_files WHERE user_id = ?`,
       args: [resolvedUserId],
     });
@@ -481,8 +481,8 @@ app.post('/api/download-links/sync', async (c) => {
 
     let added = 0, refreshed = 0;
     for (const r of toProcess) {
-      const client = s3(r.b2_type);
-      const bucket = getBucketForType(r.b2_type);
+      const client = s3(r.b2_group);
+      const bucket = getBucketForGroup(r.b2_group);
 
       const videoCmd = new GetObjectCommand({
         Bucket: bucket,
