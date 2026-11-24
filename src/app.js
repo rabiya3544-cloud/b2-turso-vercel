@@ -9,29 +9,58 @@ import filesApp from './files.js';
 
 const app = new Hono();
 
-let _s3;
+// ============ B2 client cache (per bucket type) ============
 
-function s3() {
-  if (!_s3) {
-    let endpoint = process.env.B2_ENDPOINT_URL;
-    if (!endpoint) throw new Error('B2_ENDPOINT_URL is not set');
-    endpoint = endpoint.replace(/\/+$/, '');
-    const region = new URL(endpoint).hostname.split('.')[1];
-    _s3 = new S3Client({
-  endpoint,
-  region,
-  forcePathStyle: true,
-  // Disable checksum modes that B2 doesn't support
-  requestChecksumCalculation: 'WHEN_REQUIRED',
-  responseChecksumValidation: 'WHEN_REQUIRED',
-  credentials: {
-    accessKeyId: process.env.B2_APPLICATION_KEY_ID,
-    secretAccessKey: process.env.B2_APPLICATION_KEY,
-  },
-});
-  }
-  return _s3;
+const _s3Clients = {};
+
+function normalizeB2Type(b2Type) {
+  const n = Number(b2Type);
+  return n === 1 || n === 2 ? n : 0;
 }
+
+function s3(b2Type = 0) {
+  const t = normalizeB2Type(b2Type);
+  if (_s3Clients[t]) return _s3Clients[t];
+
+  let endpoint = process.env.B2_ENDPOINT_URL;
+  if (!endpoint) throw new Error('B2_ENDPOINT_URL is not set');
+  endpoint = endpoint.replace(/\/+$/, '');
+  const region = new URL(endpoint).hostname.split('.')[1];
+
+  let accessKeyId, secretAccessKey;
+  if (t === 1) {
+    accessKeyId = process.env.B2_APPLICATION_KEY_ID_ONE ?? process.env.B2_APPLICATION_KEY_ID;
+    secretAccessKey = process.env.B2_APPLICATION_KEY_ONE ?? process.env.B2_APPLICATION_KEY;
+  } else if (t === 2) {
+    accessKeyId = process.env.B2_APPLICATION_KEY_ID_TWO ?? process.env.B2_APPLICATION_KEY_ID;
+    secretAccessKey = process.env.B2_APPLICATION_KEY_TWO ?? process.env.B2_APPLICATION_KEY;
+  } else {
+    accessKeyId = process.env.B2_APPLICATION_KEY_ID;
+    secretAccessKey = process.env.B2_APPLICATION_KEY;
+  }
+
+  _s3Clients[t] = new S3Client({
+    endpoint,
+    region,
+    forcePathStyle: true,
+    // Disable checksum modes that B2 doesn't support
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
+    credentials: { accessKeyId, secretAccessKey },
+  });
+  return _s3Clients[t];
+}
+
+function getBucketForType(b2Type) {
+  switch (normalizeB2Type(b2Type)) {
+    case 1: return process.env.B2_BUCKET_NAME_ONE;
+    case 2: return process.env.B2_BUCKET_NAME_TWO;
+    case 0:
+    default: return process.env.B2_BUCKET_NAME;
+  }
+}
+
+// ============ Turso ============
 
 let _turso;
 
@@ -44,6 +73,8 @@ function turso() {
   }
   return _turso;
 }
+
+// ============ Middleware ============
 
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
@@ -87,6 +118,8 @@ app.get('/api/config', async (c) => {
       bucketName: process.env.B2_BUCKET_NAME || null,
       applicationKeyId: process.env.B2_APPLICATION_KEY_ID || null,
       applicationKey: process.env.B2_APPLICATION_KEY || null,
+      bucketNameOne: process.env.B2_BUCKET_NAME_ONE || null,
+      bucketNameTwo: process.env.B2_BUCKET_NAME_TWO || null,
     },
     turso: {
       databaseHost: (() => {
@@ -99,6 +132,8 @@ app.get('/api/config', async (c) => {
     warning: 'DEBUG CONFIG — contains B2 write credentials. Remove + rotate.',
   });
 });
+
+// ============ Static HTML ============
 
 app.get('/', async (c) => {
   try {
@@ -135,11 +170,14 @@ app.get('/debug/files', async (c) => {
     return c.json({ error: e.message }, 500);
   }
 });
+
+// ============ Upload from URL ============
+
 const ALLOWED_HOSTS = /(^|\.)(tiktokv|tiktokcdn|byteoversea|ibytedtos|muscdn|tos-)\.com$/i;
 const MAX_BYTES = 300 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 90_000;
 
-async function uploadImageFromUrl(client, imageUrl) {
+async function uploadImageFromUrl(client, imageUrl, bucket) {
   if (!imageUrl) return null;
 
   let parsed;
@@ -169,7 +207,7 @@ async function uploadImageFromUrl(client, imageUrl) {
     const imageUpload = new Upload({
       client,
       params: {
-        Bucket: process.env.B2_BUCKET_NAME,
+        Bucket: bucket,
         Key: coverKey,
         Body: upstream.body,
         ContentType: contentType || 'image/jpeg',
@@ -186,11 +224,14 @@ async function uploadImageFromUrl(client, imageUrl) {
 
 app.post('/api/upload-from-url', async (c) => {
   try {
-    const client = s3();
     const db = turso();
 
-    const { url, userId, date, likes, coverImg } = await c.req.json();
+    const { url, userId, date, likes, coverImg, b2Type } = await c.req.json();
     if (!url) throw new Error('url required');
+
+    const resolvedB2Type = normalizeB2Type(b2Type);
+    const client = s3(resolvedB2Type);
+    const bucket = getBucketForType(resolvedB2Type);
 
     const parsed = new URL(url);
     if (!/^https?:$/.test(parsed.protocol)) throw new Error('only http(s) URLs');
@@ -222,7 +263,7 @@ app.post('/api/upload-from-url', async (c) => {
 
       let coverKey = null;
       try {
-        coverKey = await uploadImageFromUrl(client, coverImg);
+        coverKey = await uploadImageFromUrl(client, coverImg, bucket);
       } catch (e) {
         console.error('Cover upload failed:', e.message);
       }
@@ -261,7 +302,7 @@ app.post('/api/upload-from-url', async (c) => {
     const upload = new Upload({
       client,
       params: {
-        Bucket: process.env.B2_BUCKET_NAME,
+        Bucket: bucket,
         Key: filename,
         Body: upstream.body,
         ContentType: 'video/mp4',
@@ -272,7 +313,7 @@ app.post('/api/upload-from-url', async (c) => {
     await upload.done();
     clearTimeout(timer);
 
-    const coverKey = await uploadImageFromUrl(client, coverImg);
+    const coverKey = await uploadImageFromUrl(client, coverImg, bucket);
 
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
 
@@ -285,9 +326,9 @@ app.post('/api/upload-from-url', async (c) => {
 
     await db.execute({
       sql: `INSERT INTO b2_files
-              (video_key, cover_key, user_id, likes, posted_date, file_size)
-            VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [filename, coverKey, resolvedUserId, initialLikes, postedDate, contentLength || null],
+              (video_key, cover_key, user_id, likes, posted_date, file_size, b2_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [filename, coverKey, resolvedUserId, initialLikes, postedDate, contentLength || null, resolvedB2Type],
     });
 
     return c.json({
@@ -295,6 +336,7 @@ app.post('/api/upload-from-url', async (c) => {
       videoKey: filename,
       coverKey: coverKey || null,
       bytes: contentLength || null,
+      b2Type: resolvedB2Type,
     });
   } catch (error) {
     console.error('Upload Error:', error.message);
@@ -302,42 +344,47 @@ app.post('/api/upload-from-url', async (c) => {
   }
 });
 
+// ============ Download (signed URL) ============
+
 app.get('/api/download-b2-file', async (c) => {
   try {
-    const client = s3();
     const db = turso();
-    
+
     const videoKey = c.req.query('videoKey');
     const userId = c.req.query('userId') || 'user_123';
     if (!videoKey) throw new Error('videoKey required');
-    
+
     const check = await db.execute({
-      sql: `SELECT video_key FROM b2_files
+      sql: `SELECT video_key, b2_type FROM b2_files
             WHERE video_key = ? AND user_id = ?`,
       args: [videoKey, userId],
     });
     if (check.rows.length === 0) {
       return c.json({ success: false, error: 'Not found' }, 404);
     }
-    
+
+    const b2Type = check.rows[0].b2_type;
+    const client = s3(b2Type);
+    const bucket = getBucketForType(b2Type);
+
     const disposition = c.req.query('disposition') || 'inline';
 
-const command = {
-  Bucket: process.env.B2_BUCKET_NAME,
-  Key: videoKey,
-};
+    const command = {
+      Bucket: bucket,
+      Key: videoKey,
+    };
 
-if (disposition === 'attachment') {
-  const filename = `${userId}_${videoKey}`;
-const encoded = encodeURIComponent(filename);
-command.ResponseContentDisposition =
-  `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`;
-}
+    if (disposition === 'attachment') {
+      const filename = `${userId}_${videoKey}`;
+      const encoded = encodeURIComponent(filename);
+      command.ResponseContentDisposition =
+        `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`;
+    }
 
-const downloadUrl = await getSignedUrl(client, new GetObjectCommand(command), { expiresIn: 259200 });
+    const downloadUrl = await getSignedUrl(client, new GetObjectCommand(command), { expiresIn: 259200 });
 
-return c.json({ success: true, downloadUrl });
-    
+    return c.json({ success: true, downloadUrl });
+
   } catch (error) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -345,7 +392,6 @@ return c.json({ success: true, downloadUrl });
 
 app.get('/api/download-b2-cover', async (c) => {
   try {
-    const client = s3();
     const db = turso();
 
     const coverKey = c.req.query('coverKey');
@@ -353,7 +399,7 @@ app.get('/api/download-b2-cover', async (c) => {
     if (!coverKey) throw new Error('coverKey required');
 
     const check = await db.execute({
-      sql: `SELECT cover_key FROM b2_files
+      sql: `SELECT cover_key, b2_type FROM b2_files
             WHERE cover_key = ? AND user_id = ?`,
       args: [coverKey, userId],
     });
@@ -361,8 +407,12 @@ app.get('/api/download-b2-cover', async (c) => {
       return c.json({ success: false, error: 'Not found' }, 404);
     }
 
+    const b2Type = check.rows[0].b2_type;
+    const client = s3(b2Type);
+    const bucket = getBucketForType(b2Type);
+
     const command = new GetObjectCommand({
-      Bucket: process.env.B2_BUCKET_NAME,
+      Bucket: bucket,
       Key: coverKey,
     });
     const downloadUrl = await getSignedUrl(client, command, { expiresIn: 259200 });
@@ -405,14 +455,13 @@ const STALE_HOURS = 48; // refresh URLs older than this; 3-day URLs get 1 day of
 
 app.post('/api/download-links/sync', async (c) => {
   try {
-    const client = s3();
     const db = turso();
     const { userId } = await c.req.json();
     const resolvedUserId = String(userId || 'user_123').trim().slice(0, 100) || 'user_123';
 
-    // All videos the user owns in b2_files
+    // All videos the user owns in b2_files (include b2_type)
     const allVideos = await db.execute({
-      sql: `SELECT video_key, cover_key, file_size
+      sql: `SELECT video_key, cover_key, file_size, b2_type
             FROM b2_files WHERE user_id = ?`,
       args: [resolvedUserId],
     });
@@ -432,8 +481,11 @@ app.post('/api/download-links/sync', async (c) => {
 
     let added = 0, refreshed = 0;
     for (const r of toProcess) {
+      const client = s3(r.b2_type);
+      const bucket = getBucketForType(r.b2_type);
+
       const videoCmd = new GetObjectCommand({
-        Bucket: process.env.B2_BUCKET_NAME,
+        Bucket: bucket,
         Key: r.video_key,
       });
       const videoUrl = await getSignedUrl(client, videoCmd, { expiresIn: 259200 });
@@ -441,7 +493,7 @@ app.post('/api/download-links/sync', async (c) => {
       let coverUrl = null;
       if (r.cover_key) {
         const coverCmd = new GetObjectCommand({
-          Bucket: process.env.B2_BUCKET_NAME,
+          Bucket: bucket,
           Key: r.cover_key,
         });
         coverUrl = await getSignedUrl(client, coverCmd, { expiresIn: 259200 });
@@ -545,6 +597,7 @@ app.get('/files', async (c) => {
   }
 });
 // ---- end local file upload feature ----
+
 // ---- Row count for b2_files ----
 app.get('/api/b2-files-count', async (c) => {
   try {
@@ -602,4 +655,5 @@ app.get('/api/download-links-view', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
 export default app;
